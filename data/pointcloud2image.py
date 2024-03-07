@@ -26,7 +26,7 @@ def read_pointcloud(scan_id):
     """
     Reads a pointcloud from a file and returns points with instance label.
     """
-    plydata = trimesh.load(os.path.join('/data/wangziqin/project/CVPR2023-VLSAT/data/3RScan', scan_id, 'labels.instances.annotated.v2.ply'), process=False)
+    plydata = trimesh.load(os.path.join('/raid/coss07/CVPR2023-VLSAT/data/3RScan', scan_id, 'labels.instances.annotated.v2.ply'), process=False)
     points = np.array(plydata.vertices)
     labels = np.array(plydata.metadata['ply_raw']['vertex']['data']['objectId'])
 
@@ -52,12 +52,12 @@ def read_json(split):
     """
     selected_scans = set()
     if split == 'train' :
-        selected_scans = selected_scans.union(read_txt_to_list('/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/train_scans.txt'))
-        with open("/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/relationships_train.json", "r") as read_file:
+        selected_scans = selected_scans.union(read_txt_to_list('/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/train_scans.txt'))
+        with open("/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/relationships_train.json", "r") as read_file:
             data = json.load(read_file)
     elif split == 'val':
-        selected_scans = selected_scans.union(read_txt_to_list('/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/validation_scans.txt'))
-        with open("/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/relationships_validation.json", "r") as read_file:
+        selected_scans = selected_scans.union(read_txt_to_list('/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/validation_scans.txt'))
+        with open("/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/relationships_validation.json", "r") as read_file:
             data = json.load(read_file)
     else:
         raise RuntimeError('unknown split type:',split)
@@ -113,7 +113,7 @@ def read_extrinsic(extrinsic_path):
     return pose
 
 def read_scan_info(scan_id, mode='rgb'):
-    scan_path = os.path.join("/data/wangziqin/project/CVPR2023-VLSAT/data/3RScan", scan_id)
+    scan_path = os.path.join("/raid/coss07/CVPR2023-VLSAT/data/3RScan", scan_id)
     sequence_path = os.path.join(scan_path, "sequence")
     intrinsic_path = os.path.join(sequence_path, "_info.txt")
     intrinsic_info = read_intrinsic(intrinsic_path, mode='rgb')
@@ -326,15 +326,15 @@ if __name__ == '__main__':
     print("========= Deal with {} ========".format(args.mode))
     scene_data, selected_scans = read_json(args.mode)
     # record global quanlity
-    fin_all = open(os.path.join(f'/data/wangziqin/project/CVPR2023-VLSAT/data/3RScan/{args.mode}_all_quanlity.txt'), 'a')
+    fin_all = open(os.path.join(f'/raid/coss07/CVPR2023-VLSAT/data/3RScan/{args.mode}_all_quanlity.txt'), 'a')
     for i in tqdm(selected_scans):
         instance_names = scene_data[i]['obj']
         pc_i, instances_i = read_pointcloud(i)
         # print(f'======= read image and extrinsic for {i} =========')
         image_list, extrinsic_list, intrinsic_info = read_scan_info(i)
-        save_path = f'/data/wangziqin/project/CVPR2023-VLSAT/data/3RScan/{i}/multi_view'
+        save_path = f'/raid/coss07/CVPR2023-VLSAT/data/3RScan/{i}/multi_view'
         os.makedirs(save_path, exist_ok=True)
         # print(f'======= map pointcloud to image =========')
-        class_list, class_weight = get_label('/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt')
+        class_list, class_weight = get_label('/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt')
         map_pc_to_image(pc_i, instances_i, image_list, instance_names, extrinsic_list, intrinsic_info['m_intrinsic'], intrinsic_info['m_Width'], intrinsic_info['m_Height'], class_list, class_weight, save_path, i, fin_all)
     fin_all.close()

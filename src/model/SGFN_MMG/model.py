@@ -334,11 +334,162 @@ class Mmgnet(BaseModel):
         else:
             return obj_logits_3d, obj_logits_2d, rel_cls_3d, rel_cls_2d
 
+    def kd_process_train(self, teacher_model, obj_points, obj_2d_feats, gt_cls, descriptor, gt_rel_cls, edge_indices, batch_ids=None, with_log=False, ignore_none_rel=False, weights_obj=None, weights_rel=None):
+        self.iteration +=1    
+
+        obj_logits_3d, obj_logits_2d, rel_cls_3d, rel_cls_2d, obj_feature_3d, obj_feature_2d, edge_feature_2d, obj_logit_scale = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=True)
+        t_obj_logits_3d, t_obj_logits_2d, t_rel_cls_3d, t_rel_cls_2d, t_obj_feature_3d, t_obj_feature_2d, t_edge_feature_2d, t_obj_logit_scale = teacher_model(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=True)
+        
+
+        # compute loss for obj
+        loss_obj_3d = F.cross_entropy(obj_logits_3d, gt_cls)
+        loss_obj_2d = F.cross_entropy(obj_logits_2d, gt_cls)
+        
+        ############ KD ############
+        t_loss_obj_3d = F.cross_entropy(t_obj_logits_3d, gt_cls)
+        t_loss_obj_2d = F.cross_entropy(t_obj_logits_2d, gt_cls)
+
+         # compute loss for rel
+        if self.mconfig.multi_rel_outputs:
+            if self.mconfig.WEIGHT_EDGE == 'BG':
+                if self.mconfig.w_bg != 0:
+                    weight = self.mconfig.w_bg * (1 - gt_rel_cls) + (1 - self.mconfig.w_bg) * gt_rel_cls
+                else:
+                    weight = None
+            elif self.mconfig.WEIGHT_EDGE == 'DYNAMIC':
+                batch_mean = torch.sum(gt_rel_cls, dim=(0))
+                zeros = (gt_rel_cls.sum(-1) ==0).sum().unsqueeze(0)
+                batch_mean = torch.cat([zeros,batch_mean],dim=0)
+                weight = torch.abs(1.0 / (torch.log(batch_mean+1)+1)) # +1 to prevent 1 /log(1) = inf                
+                if ignore_none_rel:
+                    weight[0] = 0
+                    weight *= 1e-2 # reduce the weight from ScanNet
+                    # print('set weight of none to 0')
+                if 'NONE_RATIO' in self.mconfig:
+                    weight[0] *= self.mconfig.NONE_RATIO
+                    
+                weight[torch.where(weight==0)] = weight[0].clone() if not ignore_none_rel else 0# * 1e-3
+                weight = weight[1:]                
+            elif self.mconfig.WEIGHT_EDGE == 'OCCU':
+                weight = weights_rel
+            elif self.mconfig.WEIGHT_EDGE == 'NONE':
+                weight = None
+            else:
+                raise NotImplementedError("unknown weight_edge type")
+
+            loss_rel_3d = F.binary_cross_entropy(rel_cls_3d, gt_rel_cls, weight=weight)
+            loss_rel_2d = F.binary_cross_entropy(rel_cls_2d, gt_rel_cls, weight=weight)
+
+            ############ KD ############
+            t_loss_rel_3d = F.binary_cross_entropy(t_rel_cls_3d, gt_rel_cls, weight=weight)
+            t_loss_rel_2d = F.binary_cross_entropy(t_rel_cls_2d, gt_rel_cls, weight=weight)
+        else:
+            if self.mconfig.WEIGHT_EDGE == 'DYNAMIC':
+                one_hot_gt_rel = torch.nn.functional.one_hot(gt_rel_cls,num_classes = self.num_rel)
+                batch_mean = torch.sum(one_hot_gt_rel, dim=(0), dtype=torch.float)
+                weight = torch.abs(1.0 / (torch.log(batch_mean+1)+1)) # +1 to prevent 1 /log(1) = inf
+                if ignore_none_rel: 
+                    weight[0] = 0 # assume none is the first relationship
+                    weight *= 1e-2 # reduce the weight from ScanNet
+            elif self.mconfig.WEIGHT_EDGE == 'OCCU':
+                weight = weights_rel
+            elif self.mconfig.WEIGHT_EDGE == 'BG':
+                if self.mconfig.w_bg != 0:
+                    weight = self.mconfig.w_bg * (1 - gt_rel_cls) + (1 - self.mconfig.w_bg) * gt_rel_cls
+                else:
+                    weight = None
+            elif self.mconfig.WEIGHT_EDGE == 'NONE':
+                weight = None
+            else:
+                raise NotImplementedError("unknown weight_edge type")
+
+            if 'ignore_entirely' in self.mconfig and (self.mconfig.ignore_entirely and ignore_none_rel):
+                loss_rel_2d = loss_rel_3d = torch.zeros(1, device=rel_cls_3d.device, requires_grad=False)
+            else:
+                loss_rel_3d = F.nll_loss(rel_cls_3d, gt_rel_cls, weight = weight)
+                loss_rel_2d = F.nll_loss(rel_cls_2d, gt_rel_cls, weight = weight)
+
+                ############ KD ############
+                t_loss_rel_3d = F.binary_cross_entropy(t_rel_cls_3d, gt_rel_cls, weight=weight)
+                t_loss_rel_2d = F.binary_cross_entropy(t_rel_cls_2d, gt_rel_cls, weight=weight)
+        
+        lambda_r = 1.0
+        lambda_o = self.mconfig.lambda_o
+        lambda_max = max(lambda_r,lambda_o)
+        lambda_r /= lambda_max
+        lambda_o /= lambda_max
+
+        obj_feature_3d = obj_feature_3d / obj_feature_3d.norm(dim=-1, keepdim=True)
+        obj_feature_2d = obj_feature_2d / obj_feature_2d.norm(dim=-1, keepdim=True)
+        loss_mimic = self.cosine_loss(obj_feature_3d, obj_feature_2d, t=0.8)
+        
+        ############ KD ############
+        t_obj_feature_3d = t_obj_feature_3d / t_obj_feature_3d.norm(dim=-1, keepdim=True)
+        t_obj_feature_2d = t_obj_feature_2d / t_obj_feature_2d.norm(dim=-1, keepdim=True)
+        t_loss_mimic = self.cosine_loss(t_obj_feature_3d, t_obj_feature_2d, t=0.8)
+
+        # compute similarity between visual with text
+        rel_text_feat = self.get_rel_emb(gt_cls, gt_rel_cls, edge_indices)
+
+        edge_feature_2d = edge_feature_2d / edge_feature_2d.norm(dim=-1, keepdim=True)
+        rel_mimic_2d = F.l1_loss(edge_feature_2d, rel_text_feat)
+
+        ############ KD ############
+        t_edge_feature_2d = t_edge_feature_2d / t_edge_feature_2d.norm(dim=-1, keepdim=True)
+        t_rel_mimic_2d = F.l1_loss(t_edge_feature_2d, rel_text_feat)
+
+        loss = lambda_o * (loss_obj_2d + loss_obj_3d) + 3 * lambda_r * (loss_rel_2d + loss_rel_3d) + 0.1 * (loss_mimic + rel_mimic_2d)
+        
+        ############ KD ############
+        t_loss = lambda_o * (t_loss_obj_2d + t_loss_obj_3d) + 3 * lambda_r * (t_loss_rel_2d + t_loss_rel_3d) + 0.1 * (t_loss_mimic + t_rel_mimic_2d)
+        
+        
+
+        self.backward(loss)
+        
+        # compute 3d metric
+        top_k_obj = evaluate_topk_object(obj_logits_3d.detach(), gt_cls, topk=11)
+        gt_edges = get_gt(gt_cls, gt_rel_cls, edge_indices, self.mconfig.multi_rel_outputs)
+        top_k_rel = evaluate_topk_predicate(rel_cls_3d.detach(), gt_edges, self.mconfig.multi_rel_outputs, topk=6)
+        obj_topk_list = [100 * (top_k_obj <= i).sum() / len(top_k_obj) for i in [1, 5, 10]]
+        rel_topk_list = [100 * (top_k_rel <= i).sum() / len(top_k_rel) for i in [1, 3, 5]]
+
+        # compute 2d metric
+        top_k_obj = evaluate_topk_object(obj_logits_2d.detach(), gt_cls, topk=11)
+        top_k_rel = evaluate_topk_predicate(rel_cls_2d.detach(), gt_edges, self.mconfig.multi_rel_outputs, topk=6)
+        obj_topk_2d_list = [100 * (top_k_obj <= i).sum() / len(top_k_obj) for i in [1, 5, 10]]
+        rel_topk_2d_list = [100 * (top_k_rel <= i).sum() / len(top_k_rel) for i in [1, 3, 5]]
+        
+        
+        log = [("train/rel_loss", loss_rel_3d.detach().item()),
+                ("train/obj_loss", loss_obj_3d.detach().item()),
+                ("train/2d_rel_loss", loss_rel_2d.detach().item()),
+                ("train/2d_obj_loss", loss_obj_2d.detach().item()),
+                ("train/mimic_loss", loss_mimic.detach().item()),
+                ("train/logit_scale", obj_logit_scale.detach().item()),
+                ("train/rel_mimic_loss_2d", rel_mimic_2d.detach().item()),
+                ("train/loss", loss.detach().item()),
+                ("train/Obj_R1", obj_topk_list[0]),
+                ("train/Obj_R5", obj_topk_list[1]),
+                ("train/Obj_R10", obj_topk_list[2]),
+                ("train/Pred_R1", rel_topk_list[0]),
+                ("train/Pred_R3", rel_topk_list[1]),
+                ("train/Pred_R5", rel_topk_list[2]),
+                ("train/Obj_R1_2d", obj_topk_2d_list[0]),
+                ("train/Obj_R5_2d", obj_topk_2d_list[1]),
+                ("train/Obj_R10_2d", obj_topk_2d_list[2]),
+                ("train/Pred_R1_2d", rel_topk_2d_list[0]),
+                ("train/Pred_R3_2d", rel_topk_2d_list[1]),
+                ("train/Pred_R5_2d", rel_topk_2d_list[2]),
+            ]
+        return log
+
     def process_train(self, obj_points, obj_2d_feats, gt_cls, descriptor, gt_rel_cls, edge_indices, batch_ids=None, with_log=False, ignore_none_rel=False, weights_obj=None, weights_rel=None):
         self.iteration +=1    
 
         obj_logits_3d, obj_logits_2d, rel_cls_3d, rel_cls_2d, obj_feature_3d, obj_feature_2d, edge_feature_2d, obj_logit_scale = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=True)
         
+
         # compute loss for obj
         loss_obj_3d = F.cross_entropy(obj_logits_3d, gt_cls)
         loss_obj_2d = F.cross_entropy(obj_logits_2d, gt_cls)
@@ -454,7 +605,7 @@ class Mmgnet(BaseModel):
                 ("train/Pred_R5_2d", rel_topk_2d_list[2]),
             ]
         return log
-           
+
     def process_val(self, obj_points, obj_2d_feats, gt_cls, descriptor, gt_rel_cls, edge_indices, batch_ids=None, with_log=False, use_triplet=False):
  
         obj_logits_3d, obj_logits_2d, rel_cls_3d, rel_cls_2d = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=False)
