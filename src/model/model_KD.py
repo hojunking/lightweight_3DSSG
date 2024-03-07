@@ -96,7 +96,11 @@ class MMGNet():
             shuffle=True,
             collate_fn=collate_fn_mmg,
         )
-        
+
+        ########## KD 
+        teacher = self.teacher.load_state_dict(torch.load('/raid/coss07/CVPR2023-VLSAT/checkpoints/3dssg_best_ckpt/mmg_best.pth'))
+
+
         self.model.epoch = 1
         keep_training = True
         

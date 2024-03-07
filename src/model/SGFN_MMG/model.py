@@ -445,7 +445,7 @@ class Mmgnet(BaseModel):
         
         
 
-        self.backward(loss)
+        self.backward(loss+t_loss)
         
         # compute 3d metric
         top_k_obj = evaluate_topk_object(obj_logits_3d.detach(), gt_cls, topk=11)
