@@ -8,7 +8,7 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
-from src.lib.pointnet.graph import GraphTripleConvNet
+#from src.lib.pointnet.graph import GraphTripleConvNet
 from src.model.model_utils.networks_base import BaseNetwork
 from src.utils import op_utils
 

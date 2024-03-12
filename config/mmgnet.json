@@ -1,9 +1,9 @@
 {
   "_NAME": ["SGFN", "Mmgnet"],
-  "MODEL_PATH": "/data/wangziqin/project/CVPR2023-VLSAT/src/model/model.py",
+  "MODEL_PATH": "/raid/coss07/CVPR2023-VLSAT/src/model/model.py",
   "NAME": "Mmgnet",
-  "PATH": "/data/wangziqin/project/CVPR2023-VLSAT/output",
-  "multi_view_root": "/data/wangziqin/project/CVPR2023-VLSAT",
+  "PATH": "/raid/coss07/CVPR2023-VLSAT/output",
+  "multi_view_root": "/raid/coss07/CVPR2023-VLSAT",
   "VERBOSE": false,
   "SEED": 2020,
   "MAX_EPOCHES": 100,
@@ -57,12 +57,12 @@
     "NUM_HEADS": 8,
     "use_pretrain":"",
     "use_descriptor": true,
-    "obj_label_path":"/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt",
-    "rel_label_path":"/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset/relations.txt",
-    "adapter_path":"/data/wangziqin/project/3DSSG_Repo/clip_adapter/checkpoint/origin_mean.pth"
+    "obj_label_path":"/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt",
+    "rel_label_path":"/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset/relations.txt",
+    "adapter_path":"/raid/coss07/CVPR2023/clip_adapter/checkpoint/origin_mean.pth"
   },
   "dataset": {
-    "root": "/data/wangziqin/project/CVPR2023-VLSAT/data/3DSSG_subset",
+    "root": "/raid/coss07/CVPR2023-VLSAT/data/3DSSG_subset",
     "selection": "",
     "use_data_augmentation": false,
     "ignore_scannet_rel": true,
