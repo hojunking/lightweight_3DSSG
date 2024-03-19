@@ -3,7 +3,7 @@ import zipfile
 import glob
 
 # Specify the parent directory where the 1,445 folders are located
-parent_directory = '/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/data/3RScan/'
+parent_directory = '/home/hojun/git/CVPR2023-VLSAT/data/3RScan/'
 
 print("aa")
 # Search for all directories within the parent directory
