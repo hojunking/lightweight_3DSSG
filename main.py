@@ -4,6 +4,7 @@ from genericpath import isfile
 import json
 import os
 if __name__ == '__main__':
+    #os.sys.path.append('./pytorch_geometric/torch_geometric')
     os.sys.path.append('./src')
 from src.model.model import MMGNet
 from src.utils.config import Config

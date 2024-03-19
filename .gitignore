@@ -8,3 +8,5 @@ checkpoints/
 files/
 *.pyc
 .ipynb_checkpoints/
+config/logs/
+config/ckp/

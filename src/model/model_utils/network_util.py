@@ -53,9 +53,10 @@ class Gen_Index(MessagePassing):
         super().__init__(flow=flow)
         
     def forward(self, x, edges_indices):
-        size = self.__check_input__(edges_indices, None)
-        coll_dict = self.__collect__(self.__user_args__,edges_indices,size, {"x":x})
-        msg_kwargs = self.inspector.distribute('message', coll_dict)
+        size = self._check_input(edges_indices, None)
+        coll_dict = self._collect(self._user_args,edges_indices,size, {"x":x})
+        #msg_kwargs = self.inspector.distribute('message', coll_dict)
+        msg_kwargs = self.inspector.collect_param_data('message', coll_dict)
         x_i, x_j = self.message(**msg_kwargs)
         return x_i, x_j
     def message(self, x_i, x_j):
@@ -65,10 +66,11 @@ class Aggre_Index(MessagePassing):
     def __init__(self,aggr='add', node_dim=-2,flow="source_to_target"):
         super().__init__(aggr=aggr, node_dim=node_dim, flow=flow)
     def forward(self, x, edge_index,dim_size):
-        size = self.__check_input__(edge_index, None)
-        coll_dict = self.__collect__(self.__user_args__, edge_index, size,{})
+        size = self._check_input(edge_index, None)
+        coll_dict = self._collect(self._user_args, edge_index, size,{})
         coll_dict['dim_size'] = dim_size
-        aggr_kwargs = self.inspector.distribute('aggregate', coll_dict)
+        #aggr_kwargs = self.inspector.distribute('aggregate', coll_dict)
+        aggr_kwargs = self.inspector.collect_param_data('aggregate', coll_dict)
         x = self.aggregate(x, **aggr_kwargs)
         return x
 
