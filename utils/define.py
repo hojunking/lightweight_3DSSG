@@ -11,7 +11,7 @@ CLASS160_FILE = FILE_PATH+'classes160.txt'
 
 # 3RScan file names
 LABEL_FILE_NAME_RAW = 'labels.instances.annotated.v2.ply'
-LABEL_FILE_NAME = 'labels.instances.align.annotated.v2.ply'S
+LABEL_FILE_NAME = 'labels.instances.align.annotated.v2.ply'
 SEMSEG_FILE_NAME = 'semseg.v2.json'
 MTL_NAME = 'mesh.refined.mtl'
 OBJ_NAME = 'mesh.refined.v2.obj'

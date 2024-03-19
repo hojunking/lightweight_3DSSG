@@ -70,9 +70,11 @@ class Gen_edge_descriptor(MessagePassing):#TODO: move to model
         super().__init__(flow=flow)
     
     def forward(self, descriptor, edges_indices):
-        size = self.__check_input__(edges_indices, None)
-        coll_dict = self.__collect__(self.__user_args__,edges_indices,size, {"x":descriptor})
-        msg_kwargs = self.inspector.distribute('message', coll_dict)
+        print(edges_indices.type())
+        size = self._check_input(edges_indices, None)
+        coll_dict = self._collect(self._user_args,edges_indices,size, {"x":descriptor})
+        #msg_kwargs = self.inspector.distribute('message', coll_dict)
+        msg_kwargs = self.inspector.collect_param_data('message', coll_dict)
         edge_feature = self.message(**msg_kwargs)
         return edge_feature
     

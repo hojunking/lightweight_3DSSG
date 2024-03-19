@@ -108,7 +108,7 @@ class MMGNet():
                    
         if self.mconfig.use_pretrain != "":
             self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
-        
+        print("model pretrain end")
         for k, p in self.model.named_parameters():
             if p.requires_grad:
                 print(f"Para {k} need grad")
@@ -122,7 +122,7 @@ class MMGNet():
             
             for items in loader:
                 self.model.train()
-                
+                print("train") 
                 ''' get data '''
                 obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(items)
                 logs = self.model.process_train(obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
