@@ -10,3 +10,4 @@ files/
 .ipynb_checkpoints/
 config/logs/
 config/ckp/
+config/config/
