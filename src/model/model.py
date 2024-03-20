@@ -53,6 +53,9 @@ class MMGNet():
         
         ''' Build Model '''
         self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        self.teacher = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        
+
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
         self.trace_path = os.path.join(config.PATH, self.model_name, self.exp, 'traced')
@@ -93,7 +96,11 @@ class MMGNet():
             shuffle=True,
             collate_fn=collate_fn_mmg,
         )
-        
+
+        ########## KD 
+        teacher = self.teacher.load_pretrain_model(torch.load('/home/hojun/git/CVPR2023-VLSAT/checkpoints/3dssg_best_ckpt/mmg_best.pth'))
+
+
         self.model.epoch = 1
         keep_training = True
         
@@ -108,7 +115,7 @@ class MMGNet():
                    
         if self.mconfig.use_pretrain != "":
             self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
-        print("model pretrain end")
+        
         for k, p in self.model.named_parameters():
             if p.requires_grad:
                 print(f"Para {k} need grad")
@@ -121,11 +128,11 @@ class MMGNet():
             print('\n\nTraining epoch: %d' % self.model.epoch)
             
             for items in loader:
+
                 self.model.train()
-                print("train") 
                 ''' get data '''
                 obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(items)
-                logs = self.model.process_train(obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
+                logs = self.model.kd_process_train(teacher, obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
                                                 weights_obj=self.dataset_train.w_cls_obj, 
                                                 weights_rel=self.dataset_train.w_cls_rel,
                                                 ignore_none_rel = False)
