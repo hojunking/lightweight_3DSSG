@@ -136,7 +136,9 @@ class BaseModel(nn.Module):
                 if name.find(k) != -1:
                     skip = True
             if skip is False:
-                loaded &= self.loadWeights(model, os.path.join(path, name + '_best.pth'))
+                weight_path = os.path.join(path, name + '_best.pth')
+                loaded &= self.loadWeights(model, weight_path)
+                print(f'path: {weight_path} result: {loaded}', flush=True)
                 if is_freeze:
                     for k, v in model.named_parameters():
                         v.requires_grad = False

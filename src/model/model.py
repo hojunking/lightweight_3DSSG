@@ -10,9 +10,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.dataset.DataLoader import (CustomDataLoader, collate_fn_mmg)
 from src.dataset.dataset_builder import build_dataset
-from src.model.SGFN_MMG.model import Mmgnet
+from src.model.SGFN_MMG.model import Mmgnet, Mmgnet_teacher
 from src.utils import op_utils
-from src.utils.eva_utils_acc import get_mean_recall
+from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
 
 
 class MMGNet():
@@ -20,6 +20,7 @@ class MMGNet():
         self.config = config
         self.model_name = self.config.NAME
         self.mconfig = mconfig = config.MODEL
+        self.mconfig.N_lAYERS = 1
         self.exp = config.exp
         self.save_res = config.EVAL
         self.update_2d = config.update_2d
@@ -53,8 +54,8 @@ class MMGNet():
         
         ''' Build Model '''
         self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
-        self.teacher = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
-        
+        self.teacher = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        print(f'tea - {self.teacher}')
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -98,9 +99,10 @@ class MMGNet():
         )
 
         ########## KD 
-        teacher = self.teacher.load_pretrain_model(torch.load('/home/hojun/git/CVPR2023-VLSAT/checkpoints/3dssg_best_ckpt/mmg_best.pth'))
-
-
+        #teacher = self.teacher.load_pretrain_model(torch.load('/home/hojun/git/CVPR2023-VLSAT/checkpoints/3dssg_best_ckpt/mmg_best.pth'))
+        self.teacher.load_pretrain_model("./checkpoints/3dssg_best_ckpt", is_freeze=True)
+        
+        
         self.model.epoch = 1
         keep_training = True
         
@@ -132,7 +134,7 @@ class MMGNet():
                 self.model.train()
                 ''' get data '''
                 obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(items)
-                logs = self.model.kd_process_train(teacher, obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
+                logs = self.model.kd_process_train(self.teacher, obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
                                                 weights_obj=self.dataset_train.w_cls_obj, 
                                                 weights_rel=self.dataset_train.w_cls_rel,
                                                 ignore_none_rel = False)
@@ -148,7 +150,8 @@ class MMGNet():
                             if self.config.VERBOSE else [x for x in logs if not x[0].startswith('Loss')])
                 if self.config.LOG_INTERVAL and iteration % self.config.LOG_INTERVAL == 0:
                     self.log(logs, iteration)
-                if self.model.iteration >= self.max_iteration:
+                #if self.model.iteration >= self.max_iteration:
+                if self.model.iteration >= 2:
                     break
 
             progbar = op_utils.Progbar(self.total, width=20, stateful_metrics=['Misc/epo', 'Misc/it'])
@@ -162,7 +165,7 @@ class MMGNet():
                 self.save()
             
             self.model.epoch += 1
-
+            
             # if self.update_2d:
             #     print('load copy model from last epoch')
             #     # copy param from previous epoch
