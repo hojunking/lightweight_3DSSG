@@ -20,7 +20,6 @@ class MMGNet():
         self.config = config
         self.model_name = self.config.NAME
         self.mconfig = mconfig = config.MODEL
-        self.mconfig.N_lAYERS = 1
         self.exp = config.exp
         self.save_res = config.EVAL
         self.update_2d = config.update_2d
@@ -34,8 +33,10 @@ class MMGNet():
                                                use_rgb=mconfig.USE_RGB,
                                                use_normal=mconfig.USE_NORMAL)
             self.dataset_train.__getitem__(0)
+
+            
                 
-        if config.MODE  == 'train' or config.MODE  == 'trace':
+        if config.MODE  == 'train' or config.MODE  == 'trace' or config.MODE  == 'eval':
             if config.VERBOSE: print('build valid dataset')
             self.dataset_valid = build_dataset(self.config,split_type='validation_scans', shuffle_objs=False, 
                                       multi_rel_outputs=mconfig.multi_rel_outputs,
@@ -43,14 +44,24 @@ class MMGNet():
                                       use_normal=mconfig.USE_NORMAL)
             dataset = self.dataset_valid
 
+        if config.MODE  == 'train':
+            self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
+            self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
+            self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
+        elif config.MODE  == 'eval':
+            self.total = self.config.total = len(self.dataset_valid) // self.config.Batch_Size
+            self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_valid) // self.config.Batch_Size)
+            self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_valid) // self.config.Batch_Size)
+
+
         num_obj_class = len(self.dataset_valid.classNames)   
         num_rel_class = len(self.dataset_valid.relationNames)
         self.num_obj_class = num_obj_class
         self.num_rel_class = num_rel_class
         
-        self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
-        self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
-        self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
+#        self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
+#        self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
+#        self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
         
         ''' Build Model '''
         self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
@@ -150,8 +161,7 @@ class MMGNet():
                             if self.config.VERBOSE else [x for x in logs if not x[0].startswith('Loss')])
                 if self.config.LOG_INTERVAL and iteration % self.config.LOG_INTERVAL == 0:
                     self.log(logs, iteration)
-                #if self.model.iteration >= self.max_iteration:
-                if self.model.iteration >= 2:
+                if self.model.iteration >= self.max_iteration:
                     break
 
             progbar = op_utils.Progbar(self.total, width=20, stateful_metrics=['Misc/epo', 'Misc/it'])

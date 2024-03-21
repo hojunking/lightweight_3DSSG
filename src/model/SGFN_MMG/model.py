@@ -7,7 +7,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from clip_adapter.model import AdapterModel
 from src.model.model_utils.model_base import BaseModel
-from src.model.model_utils.network_MMG import MMG
+from src.model.model_utils.network_MMG import MMG, MMG_student
 from src.model.model_utils.network_PointNet import (PointNetfeat,
                                                     PointNetRelCls,
                                                     PointNetRelClsMulti)
@@ -544,11 +544,14 @@ class Mmgnet(BaseModel):
             feature_transform=mconfig.feature_transform,
             out_size=512)
         
-        self.mmg = MMG(
+        self.mmg = MMG_student(
             dim_node=512,
             dim_edge=512,
             dim_atten=self.mconfig.DIM_ATTEN,
-            depth=self.mconfig.N_LAYERS, 
+            
+            ##edit - KD
+            #depth=1, 
+            depth=self.mconfig.N_LAYERS,
             num_heads=self.mconfig.NUM_HEADS,
             aggr=self.mconfig.GCN_AGGR,
             flow=self.flow,
@@ -818,7 +821,7 @@ class Mmgnet(BaseModel):
         
         ############ KD ############
         t_loss_obj_3d = F.cross_entropy(obj_logits_3d, t_obj_logits_3d)
-        t_loss_obj_2d = F.cross_entropy(obj_logits_3d,t_obj_logits_2d)
+        t_loss_obj_2d = F.cross_entropy(obj_logits_2d, t_obj_logits_2d)
 
          # compute loss for rel
         if self.mconfig.multi_rel_outputs:
@@ -912,7 +915,8 @@ class Mmgnet(BaseModel):
         loss = lambda_o * (loss_obj_2d + loss_obj_3d) + 3 * lambda_r * (loss_rel_2d + loss_rel_3d) + 0.1 * (loss_mimic + rel_mimic_2d)
         
         ############ KD ############
-        t_loss = lambda_o * (t_loss_obj_2d + t_loss_obj_3d) + 3 * lambda_r * (t_loss_rel_2d + t_loss_rel_3d) #+ 0.1 * (t_loss_mimic + t_rel_mimic_2d)
+        t_alpha = 0.1
+        t_loss = lambda_o * t_alpha * (t_loss_obj_2d + t_loss_obj_3d) + 3 * lambda_r * (t_loss_rel_2d + t_loss_rel_3d) #+ 0.1 * (t_loss_mimic + t_rel_mimic_2d)
         loss = loss + t_loss
         
 
@@ -939,6 +943,11 @@ class Mmgnet(BaseModel):
                 ("train/mimic_loss", loss_mimic.detach().item()),
                 ("train/logit_scale", obj_logit_scale.detach().item()),
                 ("train/rel_mimic_loss_2d", rel_mimic_2d.detach().item()),
+                ("train/loss", loss.detach().item()),
+                ("train/T_rel_loss", t_loss_rel_3d.detach().item()),
+                ("train/T_obj_loss", t_loss_obj_3d.detach().item()),
+                ("train/T_2d_rel_loss", t_loss_rel_2d.detach().item()),
+                ("train/T_2d_obj_loss", t_loss_obj_2d.detach().item()),
                 ("train/loss", loss.detach().item()),
                 ("train/Obj_R1", obj_topk_list[0]),
                 ("train/Obj_R5", obj_topk_list[1]),
