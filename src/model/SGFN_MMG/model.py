@@ -14,7 +14,7 @@ from src.model.model_utils.network_PointNet import (PointNetfeat,
 from src.utils.eva_utils_acc import (evaluate_topk_object,
                                  evaluate_topk_predicate,
                                  evaluate_triplet_topk, get_gt)
-from utils import op_utils
+#from utils import op_utils
 
 class Mmgnet_teacher(BaseModel):
     def __init__(self, config, num_obj_class, num_rel_class, dim_descriptor=11):
@@ -549,9 +549,9 @@ class Mmgnet(BaseModel):
             dim_edge=512,
             dim_atten=self.mconfig.DIM_ATTEN,
             
-            ##edit - KD
-            #depth=1, 
-            depth=self.mconfig.N_LAYERS,
+            ##edit1 - KD
+            depth=1, 
+            #depth=self.mconfig.N_LAYERS,
             num_heads=self.mconfig.NUM_HEADS,
             aggr=self.mconfig.GCN_AGGR,
             flow=self.flow,
@@ -820,8 +820,8 @@ class Mmgnet(BaseModel):
         loss_obj_2d = F.cross_entropy(obj_logits_2d, gt_cls)
         
         ############ KD ############
-        t_loss_obj_3d = F.cross_entropy(obj_logits_3d, t_obj_logits_3d)
-        t_loss_obj_2d = F.cross_entropy(obj_logits_2d, t_obj_logits_2d)
+        t_loss_obj_3d = F.mse_loss(obj_logits_3d, t_obj_logits_3d)
+        t_loss_obj_2d = F.mse_loss(obj_logits_2d, t_obj_logits_2d)
 
          # compute loss for rel
         if self.mconfig.multi_rel_outputs:
@@ -856,7 +856,7 @@ class Mmgnet(BaseModel):
 
             ############ KD ############
             t_loss_rel_3d = F.binary_cross_entropy(rel_cls_3d,t_rel_cls_3d, weight=weight)
-            t_loss_rel_2d = F.binary_cross_entropy(rel_cls_3d,t_rel_cls_2d, weight=weight)
+            t_loss_rel_2d = F.binary_cross_entropy(rel_cls_2d,t_rel_cls_2d, weight=weight)
         else:
             if self.mconfig.WEIGHT_EDGE == 'DYNAMIC':
                 one_hot_gt_rel = torch.nn.functional.one_hot(gt_rel_cls,num_classes = self.num_rel)
@@ -885,7 +885,7 @@ class Mmgnet(BaseModel):
 
                 ############ KD ############
                 t_loss_rel_3d = F.binary_cross_entropy(rel_cls_3d, t_rel_cls_3d, weight=weight)
-                t_loss_rel_2d = F.binary_cross_entropy(rel_cls_3d, t_rel_cls_2d, weight=weight)
+                t_loss_rel_2d = F.binary_cross_entropy(rel_cls_2d, t_rel_cls_2d, weight=weight)
         
         lambda_r = 1.0
         lambda_o = self.mconfig.lambda_o
@@ -915,8 +915,8 @@ class Mmgnet(BaseModel):
         loss = lambda_o * (loss_obj_2d + loss_obj_3d) + 3 * lambda_r * (loss_rel_2d + loss_rel_3d) + 0.1 * (loss_mimic + rel_mimic_2d)
         
         ############ KD ############
-        t_alpha = 0.1
-        t_loss = lambda_o * t_alpha * (t_loss_obj_2d + t_loss_obj_3d) + 3 * lambda_r * (t_loss_rel_2d + t_loss_rel_3d) #+ 0.1 * (t_loss_mimic + t_rel_mimic_2d)
+        t_alpha = 0.5
+        t_loss = lambda_o * t_alpha* (t_loss_obj_2d + t_loss_obj_3d) + 3 * lambda_r * (t_loss_rel_2d + t_loss_rel_3d) #+ 0.1 * (t_loss_mimic + t_rel_mimic_2d)
         loss = loss + t_loss
         
 

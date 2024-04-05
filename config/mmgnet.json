@@ -1,9 +1,9 @@
 {
   "_NAME": ["SGFN", "Mmgnet"],
-  "MODEL_PATH": "/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/src/model/model.py",
+  "MODEL_PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/src/model/model.py",
   "NAME": "Mmgnet",
-  "PATH": "/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/output",
-  "multi_view_root": "/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/",
+  "PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/output",
+  "multi_view_root": "/home/knuvi/hojun/CVPR2023-VLSAT/",
   "VERBOSE": false,
   "SEED": 2020,
   "MAX_EPOCHES": 60,
@@ -57,12 +57,12 @@
     "NUM_HEADS": 8,
     "use_pretrain":"",
     "use_descriptor": true,
-    "obj_label_path":"/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt",
-    "rel_label_path":"/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/data/3DSSG_subset/relations.txt",
-    "adapter_path":"/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/clip_adapter/checkpoint/origin_mean.pth"
+    "obj_label_path":"/home/knuvi/hojun/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt",
+    "rel_label_path":"/home/knuvi/hojun/CVPR2023-VLSAT/data/3DSSG_subset/relations.txt",
+    "adapter_path":"/home/knuvi/hojun/CVPR2023-VLSAT/clip_adapter/checkpoint/origin_mean.pth"
   },
   "dataset": {
-    "root": "/home/knuvi/Desktop/hojun/CVPR2023-VLSAT/data/3DSSG_subset",
+    "root": "/home/knuvi/hojun/CVPR2023-VLSAT/data/3DSSG_subset",
     "selection": "",
     "use_data_augmentation": false,
     "ignore_scannet_rel": true,
