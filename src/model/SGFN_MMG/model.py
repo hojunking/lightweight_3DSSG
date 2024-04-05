@@ -14,7 +14,7 @@ from src.model.model_utils.network_PointNet import (PointNetfeat,
 from src.utils.eva_utils_acc import (evaluate_topk_object,
                                  evaluate_topk_predicate,
                                  evaluate_triplet_topk, get_gt)
-#from utils import op_utils
+from utils import op_utils
 
 class Mmgnet_teacher(BaseModel):
     def __init__(self, config, num_obj_class, num_rel_class, dim_descriptor=11):
@@ -284,8 +284,11 @@ class Mmgnet_teacher(BaseModel):
         #return torch.sum(torch.tensor(triplet_loss))
         return torch.mean(torch.tensor(triplet_loss))
     
-    def forward(self, obj_points, obj_2d_feats, edge_indices, descriptor=None, batch_ids=None, istrain=False):
 
+    
+
+    def forward(self, obj_points, obj_2d_feats, edge_indices, descriptor=None, batch_ids=None, istrain=False):
+        
         obj_feature = self.obj_encoder(obj_points)
         if istrain:
             obj_feature_3d_mimic = obj_feature[..., :512].clone()
@@ -478,7 +481,11 @@ class Mmgnet_teacher(BaseModel):
             rel_scores = None
 
         return top_k_obj, top_k_obj_2d, top_k_rel, top_k_rel_2d, top_k_triplet, top_k_2d_triplet, cls_matrix, sub_scores, obj_scores, rel_scores
- 
+    
+    def pruning_encoder(self, obj_points):
+        obj_feature = self.obj_encoder(obj_points)
+        
+        return obj_feature
     
     def backward(self, loss):
         loss.backward()

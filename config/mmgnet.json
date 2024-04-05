@@ -84,5 +84,28 @@
     "drop_edge": 0.5,
     "drop_edge_eval": 0.0,
     "use_object_weight": false
+  },
+  "pruning_pointnet":{
+    "method": "group_norm",
+    "speed_up":4.0,
+    "max_pruning_ratio":1.0,
+    "soft_keeping_ratio":0.5,
+    "pruning_type":"l1",
+    "reg":5e-4,
+    "delta_reg":1e-4,
+    "weight_decay":5e-4,
+    "global_pruning":false,
+    "sl_lr_decay_milestones":"60,80",
+    "iterative_steps":400
+  },
+  "pruning_tf":{
+    "prune": false,
+    "taylor_batchs":10,
+    "pruning_ratio":0.5,
+    "bottleneck":false,
+    "pruning_type":"l1",
+    "global_pruning":false,
+    "prune_num_heads":false,
+    "head_pruning_ratio":0.0
   }
 }

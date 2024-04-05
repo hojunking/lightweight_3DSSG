@@ -15,6 +15,8 @@ from src.utils import op_utils
 from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
 # pruning
 import torch_pruning as tp
+from functools import partial
+import torch.nn.functional as F
 
 import time
 class MMGNet():
@@ -26,6 +28,18 @@ class MMGNet():
         self.save_res = config.EVAL
         self.update_2d = config.update_2d
         
+        ''' Pruning_pointnet config '''
+        self.prune_method = config.pruning_pointnet.method
+        self.prune_speed_up = config.pruning_pointnet.speed_up
+        self.prune_max_pruning_ratio = config.pruning_pointnet.max_pruning_ratio
+        self.prune_soft_keeping_ratio = config.pruning_pointnet.soft_keeping_ratio
+        self.prune_pruning_type = config.pruning_pointnet.pruning_type
+        self.prune_reg = config.pruning_pointnet.reg
+        self.prune_delta_reg = config.pruning_pointnet.delta_reg
+        self.prune_weight_decay = config.pruning_pointnet.weight_decay
+        self.prune_global_pruning = config.pruning_pointnet.global_pruning
+        self.prune_sl_lr_decay_milestones = config.pruning_pointnet.sl_lr_decay_milestones 
+
         ''' Build dataset '''
         dataset = None
         if config.MODE  == 'train':
@@ -98,7 +112,73 @@ class MMGNet():
             self.cuda(obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids)
         return obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids
 
-
+    def get_pruner(self, model, example_inputs, num_classes):
+        self.config.pruning_pointnet.sparsity_learning = False
+        if self.config.pruning_pointnet.method == "random":
+            imp = tp.importance.RandomImportance()
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "l1":
+            imp = tp.importance.MagnitudeImportance(p=1)
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "l2":
+            imp = tp.importance.MagnitudeImportance(p=2)
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "fpgm":
+            imp = tp.importance.FPGMImportance(p=2)
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "obdc":
+            imp = tp.importance.OBDCImportance(group_reduction='mean', num_classes=self.config.pruning_pointnet.num_classes)
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "lamp":
+            imp = tp.importance.LAMPImportance(p=2)
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "slim":
+            self.config.pruning_pointnet.sparsity_learning = True
+            imp = tp.importance.BNScaleImportance()
+            pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.config.pruning_pointnet.reg, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "group_slim":
+            self.config.pruning_pointnet.sparsity_learning = True
+            imp = tp.importance.BNScaleImportance()
+            pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.config.pruning_pointnet.reg, global_pruning=self.config.pruning_pointnet.global_pruning, group_lasso=True)
+        elif self.config.pruning_pointnet.method == "group_norm":
+            imp = tp.importance.GroupNormImportance(p=2)
+            pruner_entry = partial(tp.pruner.GroupNormPruner, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "group_sl":
+            self.config.pruning_pointnet.sparsity_learning = True
+            imp = tp.importance.GroupNormImportance(p=2, normalizer='max') # normalized by the maximum score for CIFAR
+            pruner_entry = partial(tp.pruner.GroupNormPruner, reg=self.config.pruning_pointnet.reg, global_pruning=self.config.pruning_pointnet.global_pruning)
+        elif self.config.pruning_pointnet.method == "growing_reg":
+            self.config.pruning_pointnet.sparsity_learning = True
+            imp = tp.importance.GroupNormImportance(p=2)
+            pruner_entry = partial(tp.pruner.GrowingRegPruner, reg=self.config.pruning_pointnet.reg, delta_reg=self.config.pruning_pointnet.delta_reg, global_pruning=self.config.global_pruning)
+        else:
+            raise NotImplementedError
+        
+        #args.is_accum_importance = is_accum_importance
+        unwrapped_parameters = []
+        ignored_layers = []
+        pruning_ratio_dict = {}
+        # ignore output layers
+        for m in model.modules():
+            if isinstance(m, torch.nn.Linear) and m.out_features == num_classes:
+                ignored_layers.append(m)
+            elif isinstance(m, torch.nn.modules.conv._ConvNd) and m.out_channels == num_classes:
+                ignored_layers.append(m)
+        
+        # Here we fix iterative_steps=200 to prune the model progressively with small steps 
+        # until the required speed up is achieved.
+        pruner = pruner_entry(
+            model,
+            example_inputs,
+            importance=imp,
+            iterative_steps=self.config.pruning_pointnet.iterative_steps,
+            pruning_ratio=1.0,
+            pruning_ratio_dict=pruning_ratio_dict,
+            max_pruning_ratio=self.config.pruning_pointnet.max_pruning_ratio,
+            ignored_layers=ignored_layers,
+            unwrapped_parameters=unwrapped_parameters,
+        )
+        return pruner
 
     def train(self):
         ''' create data loader '''
@@ -200,8 +280,19 @@ class MMGNet():
                     
     def save(self):
         self.model.save ()
-        
-    def validation(self, debug_mode = False):
+
+    def valid_pruning(self, debug_mode = False):
+        drop_last = True
+        train_loader = CustomDataLoader(
+            config = self.config,
+            dataset=self.dataset_train,
+            batch_size=self.config.Batch_Size,
+            num_workers=self.config.WORKERS,
+            drop_last=drop_last,
+            shuffle=True,
+            collate_fn=collate_fn_mmg,
+        )
+
         val_loader = CustomDataLoader(
             config = self.config,
             dataset=self.dataset_valid,
@@ -211,7 +302,47 @@ class MMGNet():
             shuffle=False,
             collate_fn=collate_fn_mmg
         )
-       
+
+        example_inputs = self.dataset_train[0][0].unsqueeze(0).to(self.config.device)
+
+        pruner = get_pruner(self.model.obj_encoder, example_inputs=example_inputs, num_classes=self.num_obj_class)
+        print('===   Pruning   ===')
+        
+
+        self.model.obj_encoder.eval()
+        base_ops, _ = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
+        current_speed_up = 1
+        while current_speed_up < speed_up:
+            if self.config.pruning_pointnet.method == "obdc":
+                self.model.obj_encoder.zero_grad()
+                imp=pruner.importance
+                imp._prepare_model(self.model.obj_encoder, pruner)
+                for i, items in enumerate(train_loader, 0):
+                    if i>=10: break
+                    obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_val(items)
+                    obj_feature = self.model.pruning_encoder(obj_points)
+                    sampled_y = torch.multinomial(torch.nn.functional.softmax(obj_feature.cpu().data, dim=1),
+                                                  1).squeeze().to(self.config.device)
+                    loss_sample = F.cross_entropy(output, sampled_y)
+                    loss_sample.backward()
+                    imp.step()
+                pruner.step()
+            else:
+                pruner.step()    
+    
+    
+    def validation(self, debug_mode = False):
+        
+        val_loader = CustomDataLoader(
+            config = self.config,
+            dataset=self.dataset_valid,
+            batch_size=1,
+            num_workers=self.config.WORKERS,
+            drop_last=False,
+            shuffle=False,
+            collate_fn=collate_fn_mmg
+        )
+
         total = len(self.dataset_valid)
         progbar = op_utils.Progbar(total, width=20, stateful_metrics=['Misc/it'])
         
@@ -430,4 +561,34 @@ class MMGNet():
 
         return predicate_mean_1 * 100, predicate_mean_3 * 100, predicate_mean_5 * 100
 
+    def progressive_pruning(self, pruner, model, speed_up, example_inputs, train_loader=None):
+        model.eval()
+        base_ops, _ = tp.utils.count_ops_and_params(model, example_inputs=example_inputs)
+        current_speed_up = 1
+        while current_speed_up < speed_up:
+            if self.config.method == "obdc":
+                model.zero_grad()
+                imp=pruner.importance
+                imp._prepare_model(model, pruner)
+                for k, (imgs, lbls) in enumerate(train_loader):
+                    if k>=10: break
+                    imgs = imgs.to(self.config.DEVICE)
+                    lbls = lbls.to(self.config.DEVICE)
+                    output = model(imgs)
+                    sampled_y = torch.multinomial(torch.nn.functional.softmax(output.cpu().data, dim=1),
+                                                    1).squeeze().to(self.config.DEVICE)
+                    loss_sample = F.cross_entropy(output, sampled_y)
+                    loss_sample.backward()
+                    imp.step()
+                pruner.step()
+                imp._rm_hooks(model)
+                imp._clear_buffer()
+            else:
+                pruner.step()
+            pruned_ops, _ = tp.utils.count_ops_and_params(model, example_inputs=example_inputs)
+            current_speed_up = float(base_ops) / pruned_ops
+            if pruner.current_step == pruner.iterative_steps:
+                break
+        return current_speed_up
 
+    
