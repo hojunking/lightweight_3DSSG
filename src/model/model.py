@@ -42,7 +42,7 @@ class MMGNet():
 
         ''' Build dataset '''
         dataset = None
-        if config.MODE  == 'train':
+        if config.MODE  == 'train' or config.MODE == 'prune':
             if config.VERBOSE: print('build train dataset')
             self.dataset_train = build_dataset(self.config,split_type='train_scans', shuffle_objs=True,
                                                multi_rel_outputs=mconfig.multi_rel_outputs,
@@ -52,7 +52,7 @@ class MMGNet():
 
             
                 
-        if config.MODE  == 'train' or config.MODE  == 'trace' or config.MODE  == 'eval':
+        if config.MODE  == 'train' or config.MODE  == 'trace' or config.MODE  == 'eval' or config.MODE == 'prune':
             if config.VERBOSE: print('build valid dataset')
             self.dataset_valid = build_dataset(self.config,split_type='validation_scans', shuffle_objs=False, 
                                       multi_rel_outputs=mconfig.multi_rel_outputs,
@@ -68,7 +68,10 @@ class MMGNet():
             self.total = self.config.total = len(self.dataset_valid) // self.config.Batch_Size
             self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_valid) // self.config.Batch_Size)
             self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_valid) // self.config.Batch_Size)
-
+        elif config.MODE  == 'prune':
+            self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
+            self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
+            self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
 
         num_obj_class = len(self.dataset_valid.classNames)   
         num_rel_class = len(self.dataset_valid.relationNames)
@@ -81,8 +84,6 @@ class MMGNet():
         
         ''' Build Model '''
         self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
-        self.teacher = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
-
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -193,10 +194,6 @@ class MMGNet():
             collate_fn=collate_fn_mmg,
         )
 
-        ########## KD 
-        #teacher = self.teacher.load_pretrain_model(torch.load('/home/hojun/git/CVPR2023-VLSAT/checkpoints/3dssg_best_ckpt/mmg_best.pth'))
-        self.teacher.load_pretrain_model("./checkpoints/3dssg_best_ckpt", is_freeze=True)
-        
         self.model.epoch = 1
         keep_training = True
         
@@ -281,7 +278,7 @@ class MMGNet():
     def save(self):
         self.model.save ()
 
-    def valid_pruning(self, debug_mode = False):
+    def pointnet_pruning(self, debug_mode = False):
         drop_last = True
         train_loader = CustomDataLoader(
             config = self.config,
@@ -292,45 +289,54 @@ class MMGNet():
             shuffle=True,
             collate_fn=collate_fn_mmg,
         )
+        #print(self.dataset_train[0][0].unsqueeze(0).shape)
 
-        val_loader = CustomDataLoader(
-            config = self.config,
-            dataset=self.dataset_valid,
-            batch_size=1,
-            num_workers=self.config.WORKERS,
-            drop_last=False,
-            shuffle=False,
-            collate_fn=collate_fn_mmg
-        )
+        tensor = self.dataset_train[0][0]  # Original tensor
+        reshaped_tensor = tensor.view(1, 3, -1)  # Reshaping to [1, 3, 9*128]
+        example_inputs = reshaped_tensor.to(self.config.DEVICE)
+        #example_inputs = self.dataset_train[0][0].unsqueeze(0).to(self.config.DEVICE)
 
-        example_inputs = self.dataset_train[0][0].unsqueeze(0).to(self.config.device)
-
-        pruner = get_pruner(self.model.obj_encoder, example_inputs=example_inputs, num_classes=self.num_obj_class)
+        pruner = self.get_pruner(self.model.obj_encoder, example_inputs=example_inputs, num_classes=self.num_obj_class)
+        ori_ops, ori_size = tp.utils.count_ops_and_params(self.model, example_inputs=example_inputs)
         print('===   Pruning   ===')
         
-
+        ''' pregressive_pruning '''
         self.model.obj_encoder.eval()
         base_ops, _ = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
         current_speed_up = 1
-        while current_speed_up < speed_up:
+        
+        while current_speed_up < self.prune_speed_up:
             if self.config.pruning_pointnet.method == "obdc":
                 self.model.obj_encoder.zero_grad()
                 imp=pruner.importance
                 imp._prepare_model(self.model.obj_encoder, pruner)
+                
                 for i, items in enumerate(train_loader, 0):
                     if i>=10: break
                     obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_val(items)
                     obj_feature = self.model.pruning_encoder(obj_points)
+
+
                     sampled_y = torch.multinomial(torch.nn.functional.softmax(obj_feature.cpu().data, dim=1),
-                                                  1).squeeze().to(self.config.device)
-                    loss_sample = F.cross_entropy(output, sampled_y)
+                                                  1).squeeze().to(self.config.DEVICE)
+                    loss_sample = F.cross_entropy(obj_feature.cpu().data, sampled_y)
                     loss_sample.backward()
                     imp.step()
+                
                 pruner.step()
             else:
                 pruner.step()    
+           
+            pruned_ops, _ = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
+            current_speed_up = float(base_ops) / pruned_ops
+            if pruner.current_step == pruner.iterative_steps:
+                break
+        
+        pruned_ops, pruned_size = tp.utils.count_ops_and_params(self.model, example_inputs=example_inputs)
+        return current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size
     
-    
+
+        
     def validation(self, debug_mode = False):
         
         val_loader = CustomDataLoader(
@@ -531,9 +537,9 @@ class MMGNet():
                 ]
         
         self.log(logs, self.model.iteration)
-        return mean_recall[0]
+        #return mean_recall[0]
         #     print(f"Total inference time: {total_inference_time}")
-        # return 0
+        return obj_acc_1, obj_acc_5, obj_acc_10, rel_acc_1, rel_acc_3, rel_acc_5, triplet_acc_50, triplet_acc_100, mean_recall[0], mean_recall[1], zero_shot_recall[0], zero_shot_recall[1], non_zero_shot_recall[0], non_zero_shot_recall[1], all_zero_shot_recall[0], all_zero_shot_recall[1]
     
     def compute_mean_predicate(self, cls_matrix_list, topk_pred_list):
         cls_dict = {}
@@ -560,35 +566,5 @@ class MMGNet():
         predicate_mean_5 = np.mean(predicate_mean_5)
 
         return predicate_mean_1 * 100, predicate_mean_3 * 100, predicate_mean_5 * 100
-
-    def progressive_pruning(self, pruner, model, speed_up, example_inputs, train_loader=None):
-        model.eval()
-        base_ops, _ = tp.utils.count_ops_and_params(model, example_inputs=example_inputs)
-        current_speed_up = 1
-        while current_speed_up < speed_up:
-            if self.config.method == "obdc":
-                model.zero_grad()
-                imp=pruner.importance
-                imp._prepare_model(model, pruner)
-                for k, (imgs, lbls) in enumerate(train_loader):
-                    if k>=10: break
-                    imgs = imgs.to(self.config.DEVICE)
-                    lbls = lbls.to(self.config.DEVICE)
-                    output = model(imgs)
-                    sampled_y = torch.multinomial(torch.nn.functional.softmax(output.cpu().data, dim=1),
-                                                    1).squeeze().to(self.config.DEVICE)
-                    loss_sample = F.cross_entropy(output, sampled_y)
-                    loss_sample.backward()
-                    imp.step()
-                pruner.step()
-                imp._rm_hooks(model)
-                imp._clear_buffer()
-            else:
-                pruner.step()
-            pruned_ops, _ = tp.utils.count_ops_and_params(model, example_inputs=example_inputs)
-            current_speed_up = float(base_ops) / pruned_ops
-            if pruner.current_step == pruner.iterative_steps:
-                break
-        return current_speed_up
 
     

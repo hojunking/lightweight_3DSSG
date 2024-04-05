@@ -159,8 +159,8 @@ class MultiHeadedEdgeAttention_student(torch.nn.Module):
         self.num_heads = num_heads
         self.use_edge = use_edge
         #edit2 - KD
-        #self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
-        self.nn_edge = build_mlp([dim_node*2+dim_edge,dim_edge],                         
+        self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        #self.nn_edge = build_mlp([dim_node*2+dim_edge,dim_edge],                         
                           do_bn= use_bn, on_last=False)
         self.mask_obj = 0.5
         
@@ -269,9 +269,9 @@ class MMG_student(torch.nn.Module):
             nn.Linear(4, 32),  # xyz, dist
             nn.ReLU(),
             #edit3 - KD
-            # nn.LayerNorm(32),
-            # nn.Linear(32, 32),
-            # nn.ReLU(),
+            nn.LayerNorm(32),
+            nn.Linear(32, 32),
+            nn.ReLU(),
             nn.LayerNorm(32),
             nn.Linear(32, num_heads)
         )

@@ -482,10 +482,7 @@ class Mmgnet_teacher(BaseModel):
 
         return top_k_obj, top_k_obj_2d, top_k_rel, top_k_rel_2d, top_k_triplet, top_k_2d_triplet, cls_matrix, sub_scores, obj_scores, rel_scores
     
-    def pruning_encoder(self, obj_points):
-        obj_feature = self.obj_encoder(obj_points)
-        
-        return obj_feature
+    
     
     def backward(self, loss):
         loss.backward()
@@ -557,8 +554,8 @@ class Mmgnet(BaseModel):
             dim_atten=self.mconfig.DIM_ATTEN,
             
             ##edit1 - KD
-            depth=1, 
-            #depth=self.mconfig.N_LAYERS,
+            #depth=1, 
+            depth=self.mconfig.N_LAYERS,
             num_heads=self.mconfig.NUM_HEADS,
             aggr=self.mconfig.GCN_AGGR,
             flow=self.flow,
@@ -638,6 +635,11 @@ class Mmgnet(BaseModel):
         ])
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=self.config.max_iteration, last_epoch=-1)
         self.optimizer.zero_grad()
+
+    def pruning_encoder(self, obj_points):
+        obj_feature = self.obj_encoder(obj_points)
+        
+        return obj_feature
 
     def init_weight(self, obj_label_path, rel_label_path, adapter_path):
         torch.nn.init.xavier_uniform_(self.mlp_3d[0].weight)
