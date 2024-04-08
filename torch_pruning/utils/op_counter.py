@@ -27,6 +27,8 @@ def count_ops_and_params(model, example_inputs, layer_wise=False):
     flops_model.eval()
     flops_model.start_flops_count(ost=sys.stdout, verbose=False,
                                 ignore_list=[])
+
+
     if isinstance(example_inputs, (tuple, list)):
         _ = flops_model(*example_inputs)
     elif isinstance(example_inputs, dict):

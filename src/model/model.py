@@ -33,7 +33,6 @@ class MMGNet():
         self.prune_speed_up = config.pruning_pointnet.speed_up
         self.prune_max_pruning_ratio = config.pruning_pointnet.max_pruning_ratio
         self.prune_soft_keeping_ratio = config.pruning_pointnet.soft_keeping_ratio
-        self.prune_pruning_type = config.pruning_pointnet.pruning_type
         self.prune_reg = config.pruning_pointnet.reg
         self.prune_delta_reg = config.pruning_pointnet.delta_reg
         self.prune_weight_decay = config.pruning_pointnet.weight_decay
@@ -83,7 +82,7 @@ class MMGNet():
 #        self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
         
         ''' Build Model '''
-        self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        self.model = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -115,49 +114,60 @@ class MMGNet():
 
     def get_pruner(self, model, example_inputs, num_classes):
         self.config.pruning_pointnet.sparsity_learning = False
-        if self.config.pruning_pointnet.method == "random":
+        if self.prune_method == "random":
             imp = tp.importance.RandomImportance()
-            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "l1":
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "l1":
             imp = tp.importance.MagnitudeImportance(p=1)
-            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "l2":
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "l2":
             imp = tp.importance.MagnitudeImportance(p=2)
-            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "fpgm":
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "fpgm":
             imp = tp.importance.FPGMImportance(p=2)
-            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "obdc":
-            imp = tp.importance.OBDCImportance(group_reduction='mean', num_classes=self.config.pruning_pointnet.num_classes)
-            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "lamp":
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "obdc":
+            imp = tp.importance.OBDCImportance(group_reduction='mean', num_classes=self.num_obj_class)
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "lamp":
             imp = tp.importance.LAMPImportance(p=2)
-            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "slim":
+            pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "slim":
             self.config.pruning_pointnet.sparsity_learning = True
             imp = tp.importance.BNScaleImportance()
-            pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.config.pruning_pointnet.reg, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "group_slim":
+            pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.prune_reg, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "group_slim":
             self.config.pruning_pointnet.sparsity_learning = True
             imp = tp.importance.BNScaleImportance()
-            pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.config.pruning_pointnet.reg, global_pruning=self.config.pruning_pointnet.global_pruning, group_lasso=True)
-        elif self.config.pruning_pointnet.method == "group_norm":
+            pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.prune_reg, global_pruning=self.prune_global_pruning, group_lasso=True)
+        elif self.prune_method == "group_norm":
             imp = tp.importance.GroupNormImportance(p=2)
-            pruner_entry = partial(tp.pruner.GroupNormPruner, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "group_sl":
+            pruner_entry = partial(tp.pruner.GroupNormPruner, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "group_sl":
             self.config.pruning_pointnet.sparsity_learning = True
             imp = tp.importance.GroupNormImportance(p=2, normalizer='max') # normalized by the maximum score for CIFAR
-            pruner_entry = partial(tp.pruner.GroupNormPruner, reg=self.config.pruning_pointnet.reg, global_pruning=self.config.pruning_pointnet.global_pruning)
-        elif self.config.pruning_pointnet.method == "growing_reg":
+            pruner_entry = partial(tp.pruner.GroupNormPruner, reg=self.prune_reg, global_pruning=self.prune_global_pruning)
+        elif self.prune_method == "growing_reg":
             self.config.pruning_pointnet.sparsity_learning = True
             imp = tp.importance.GroupNormImportance(p=2)
-            pruner_entry = partial(tp.pruner.GrowingRegPruner, reg=self.config.pruning_pointnet.reg, delta_reg=self.config.pruning_pointnet.delta_reg, global_pruning=self.config.global_pruning)
+            pruner_entry = partial(tp.pruner.GrowingRegPruner, reg=self.prune_reg, delta_reg=self.prune_delta_reg, global_pruning=self.config.global_pruning)
         else:
             raise NotImplementedError
-        
+        print(f'prune method: {self.prune_method}')
+        print(f'prune speed up: {self.prune_speed_up}')
+        print(f'prune max pruning ratio: {self.prune_max_pruning_ratio}')
+        print(f'prune soft keeping ratio: {self.prune_soft_keeping_ratio}')
+        print(f'prune reg: {self.prune_reg}')
+        print(f'prune delta reg: {self.prune_delta_reg}')
+        print(f'prune weight decay: {self.prune_weight_decay}')
+        print(f'prune global pruning: {self.prune_global_pruning}')
+        print(f'prune sl lr decay milestones: {self.prune_sl_lr_decay_milestones}')
+        print(f'prune sparsity learning: {self.config.pruning_pointnet.sparsity_learning}')
+        print(f'prune iterative steps: {self.config.pruning_pointnet.iterative_steps}')
+
         #args.is_accum_importance = is_accum_importance
         unwrapped_parameters = []
-        ignored_layers = []
+        ignored_layers = [model.conv3]
         pruning_ratio_dict = {}
         # ignore output layers
         for m in model.modules():
@@ -225,11 +235,11 @@ class MMGNet():
                 self.model.train()
                 ''' get data '''
                 obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(items)
-                logs = self.model.kd_process_train(self.teacher, obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
+                
+                logs = self.model.process_train(obj_points, obj_2d_feats, gt_class, descriptor, gt_rel_cls, edge_indices, batch_ids, with_log=True,
                                                 weights_obj=self.dataset_train.w_cls_obj, 
                                                 weights_rel=self.dataset_train.w_cls_rel,
                                                 ignore_none_rel = False)
-                
                 iteration = self.model.iteration
                 logs += [
                     ("Misc/epo", int(self.model.epoch)),
@@ -290,49 +300,36 @@ class MMGNet():
             collate_fn=collate_fn_mmg,
         )
         #print(self.dataset_train[0][0].unsqueeze(0).shape)
+        loader = iter(train_loader)
+        item = next(loader)
+        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
+        example_inputs = obj_points
+        #print(f'shape: {example_inputs.shape}')
 
-        tensor = self.dataset_train[0][0]  # Original tensor
-        reshaped_tensor = tensor.view(1, 3, -1)  # Reshaping to [1, 3, 9*128]
-        example_inputs = reshaped_tensor.to(self.config.DEVICE)
         #example_inputs = self.dataset_train[0][0].unsqueeze(0).to(self.config.DEVICE)
-
         pruner = self.get_pruner(self.model.obj_encoder, example_inputs=example_inputs, num_classes=self.num_obj_class)
-        ori_ops, ori_size = tp.utils.count_ops_and_params(self.model, example_inputs=example_inputs)
+        ori_ops, ori_size = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
         print('===   Pruning   ===')
         
         ''' pregressive_pruning '''
         self.model.obj_encoder.eval()
-        base_ops, _ = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
+        base_ops, origin_params_count = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
         current_speed_up = 1
+        pruned_ratio = 0
+
+        print(f'Target speed up: {self.prune_speed_up}, Origin Params: {origin_params_count}')
         
-        while current_speed_up < self.prune_speed_up:
-            if self.config.pruning_pointnet.method == "obdc":
-                self.model.obj_encoder.zero_grad()
-                imp=pruner.importance
-                imp._prepare_model(self.model.obj_encoder, pruner)
-                
-                for i, items in enumerate(train_loader, 0):
-                    if i>=10: break
-                    obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_val(items)
-                    obj_feature = self.model.pruning_encoder(obj_points)
+        while pruned_ratio < 0.5:
+            print(f'current_speed_up: {current_speed_up}, pruned_ratio: {pruned_ratio}')
+            pruner.step()
 
-
-                    sampled_y = torch.multinomial(torch.nn.functional.softmax(obj_feature.cpu().data, dim=1),
-                                                  1).squeeze().to(self.config.DEVICE)
-                    loss_sample = F.cross_entropy(obj_feature.cpu().data, sampled_y)
-                    loss_sample.backward()
-                    imp.step()
-                
-                pruner.step()
-            else:
-                pruner.step()    
-           
-            pruned_ops, _ = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
+            pruned_ops, params_count = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
+            pruned_ratio = (origin_params_count - params_count) / origin_params_count
             current_speed_up = float(base_ops) / pruned_ops
             if pruner.current_step == pruner.iterative_steps:
                 break
         
-        pruned_ops, pruned_size = tp.utils.count_ops_and_params(self.model, example_inputs=example_inputs)
+        pruned_ops, pruned_size = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
         return current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size
     
 

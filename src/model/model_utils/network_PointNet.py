@@ -163,6 +163,7 @@ class PointNetfeat(BaseNetwork):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, self.out_size)
         
+
         if self.global_feat:
             if return_meta:
                 return x, trans, trans_feat

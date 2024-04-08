@@ -48,22 +48,28 @@ def main():
     if config.MODE == 'prune':
         model.load(best=True)
         
-        #acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc, acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc, acc50_triplet_acc, acc100_triplet_acc = model.validation()
+        acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc = 55.36, 78.44, 85.87
+        acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc = 89.83, 98.5, 99.51
+        acc50_triplet_acc, acc100_triplet_acc = 89.36, 92.16
         
         print('start pruning...')
         current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size = model.pointnet_pruning()
+        
+        model.train()
         pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc = model.validation()
         
+
         save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
         f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
-        # print("Acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc1_rel_cls_acc, pruned_acc1_rel_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc3_rel_cls_acc, pruned_acc3_rel_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc5_rel_cls_acc, pruned_acc5_rel_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc50_triplet_acc, pruned_acc50_triplet_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
+        print(f'current_speed_up: {current_speed_up}, pruned_size: {pruned_size}', file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc1_rel_cls_acc, pruned_acc1_rel_cls_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc3_rel_cls_acc, pruned_acc3_rel_cls_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc5_rel_cls_acc, pruned_acc5_rel_cls_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc50_triplet_acc, pruned_acc50_triplet_acc), file=f_in)
+        print("Acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
         
 
         print(
