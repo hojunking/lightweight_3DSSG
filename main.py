@@ -53,15 +53,18 @@ def main():
         acc50_triplet_acc, acc100_triplet_acc = 89.36, 92.16
         
         print('start pruning...')
-        current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size = model.pointnet_pruning()
+        model.pointnet_pruning()
+    #    current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size = model.pointnet_pruning()
         
+        print('\nstart training...\n')
         model.train()
-        pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc = model.validation()
+        pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc, _ = model.validation()
         
 
         save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
+        os.makedirs(save_path, exist_ok=True)
         f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
-        print(f'current_speed_up: {current_speed_up}, pruned_size: {pruned_size}', file=f_in)
+        # print(f'current_speed_up: {current_speed_up}, pruned_size: {pruned_size}', file=f_in)
         print("Acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
         print("Acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
         print("Acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
@@ -72,17 +75,17 @@ def main():
         print("Acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
         
 
-        print(
-            "Params: {:.2f} M => {:.2f} M ({:.2f}%)".format(
-                ori_size / 1e6, pruned_size / 1e6, pruned_size / ori_size * 100
-            ),file=f_in)
+        # print(
+        #     "Params: {:.2f} M => {:.2f} M ({:.2f}%)".format(
+        #         ori_size / 1e6, pruned_size / 1e6, pruned_size / ori_size * 100
+        #     ),file=f_in)
         
-        print("FLOPs: {:.2f} M => {:.2f} M ({:.2f}%, {:.2f}X )".format(
-                ori_ops / 1e6,
-                pruned_ops / 1e6,
-                pruned_ops / ori_ops * 100,
-                ori_ops / pruned_ops,
-                ),file=f_in)
+        # print("FLOPs: {:.2f} M => {:.2f} M ({:.2f}%, {:.2f}X )".format(
+        #         ori_ops / 1e6,
+        #         pruned_ops / 1e6,
+        #         pruned_ops / ori_ops * 100,
+        #         ori_ops / pruned_ops,
+        #         ),file=f_in)
         
         f_in.close()
 
