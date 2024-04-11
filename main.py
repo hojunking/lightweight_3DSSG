@@ -13,6 +13,7 @@ from src.utils.config import Config
 from utils import util
 import torch
 import argparse
+from fvcore.nn import FlopCountAnalysis
 
 def main():
     config = load_config()
@@ -46,33 +47,56 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        model.load(best=True)
+        #model.load(best=True)
+        # Create example inputs
+        obj_points_example = torch.randn(2, 3, 1000)  # Assuming [batch_size, dim_point, num_points]
+        obj_2d_feats_example = torch.randn(2, 512, 1500)  # Assuming [batch_size, dim_2d_feats, num_relations]
+        edge_indices_example = torch.randint(0, 1000, (2, 1500))  # Assuming [2, num_edges]
+        descriptor_example = torch.randn(2, 11)  # Assuming [batch_size, dim_descriptor]
+        batch_ids_example = torch.randint(0, 2, (2,))  # Assuming [batch_size]
+        istrain_example = False
+
+        # Ensure the inputs are in the correct format for the model's forward method
+        # Note: descriptor and batch_ids are optional arguments, so they need to be passed as keyword arguments
+        inputs = (obj_points_example, obj_2d_feats_example, edge_indices_example)
+        kwargs = {'descriptor': descriptor_example, 'batch_ids': batch_ids_example, 'istrain': istrain_example}
+        
+        flop_analysis = FlopCountAnalysis(model.model, inputs, kwargs)
+        print(f' FLOPs: {flop_analysis.total()}')
         
         acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc = 55.36, 78.44, 85.87
         acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc = 89.83, 98.5, 99.51
         acc50_triplet_acc, acc100_triplet_acc = 89.36, 92.16
+        print(f'Current paramters: 27162021')
         
         print('start pruning...')
-        model.pointnet_pruning()
-    #    current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size = model.pointnet_pruning()
+        #model.pointnet_pruning()
+
+        print(f'After encoder pruning paramters: {count_parameters(model.model)}')
+
+        #model.gnn_pruning()
+        print(f'After gcn pruning paramters: {count_parameters(model.model)}')
         
-        print('\nstart training...\n')
-        model.train()
-        pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc, _ = model.validation()
+        
+    #   current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size = model.pointnet_pruning()
+        
+        # print('\nstart training...\n')
+        # model.train()
+        # pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc, _ = model.validation()
         
 
-        save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
-        os.makedirs(save_path, exist_ok=True)
-        f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
-        # print(f'current_speed_up: {current_speed_up}, pruned_size: {pruned_size}', file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc1_rel_cls_acc, pruned_acc1_rel_cls_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc3_rel_cls_acc, pruned_acc3_rel_cls_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc5_rel_cls_acc, pruned_acc5_rel_cls_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc50_triplet_acc, pruned_acc50_triplet_acc), file=f_in)
-        print("Acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
+        # save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
+        # os.makedirs(save_path, exist_ok=True)
+        # f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
+        # # print(f'current_speed_up: {current_speed_up}, pruned_size: {pruned_size}', file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc1_rel_cls_acc, pruned_acc1_rel_cls_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc3_rel_cls_acc, pruned_acc3_rel_cls_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc5_rel_cls_acc, pruned_acc5_rel_cls_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc50_triplet_acc, pruned_acc50_triplet_acc), file=f_in)
+        # print("Acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
         
 
         # print(
@@ -87,7 +111,7 @@ def main():
         #         ori_ops / pruned_ops,
         #         ),file=f_in)
         
-        f_in.close()
+        # f_in.close()
 
         exit()
     try:
@@ -101,7 +125,11 @@ def main():
     print('start validation...')
     model.load()
     model.validation()
-    
+
+def count_parameters(model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
 def load_config():
     r"""loads model config
 

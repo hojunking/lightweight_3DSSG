@@ -88,9 +88,10 @@
   
   "pruning_pointnet":{
     "method": "group_norm",
-    "speed_up":1.1,
-    "max_pruning_ratio":1.0,
+    "max_pruning_ratio":1,
     "soft_keeping_ratio":0.2,
+    "pruning_ratio":0.5,
+    "speed_up":1.1,
     "pruning_type":"l1",
     "reg":5e-4,
     "delta_reg":1e-4,
