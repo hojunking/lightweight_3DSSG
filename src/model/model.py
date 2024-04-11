@@ -18,7 +18,6 @@ import torch_pruning as tp
 from functools import partial
 import torch.nn.functional as F
 from fvcore.nn import FlopCountAnalysis
-
 import time
 class MMGNet():
     def __init__(self, config):
@@ -319,6 +318,24 @@ class MMGNet():
             raise NotImplementedError
         print(f'en_current_speed_up: {current_speed_up}, pruned_ratio: {pruned_ratio}\n')
 
+    def calc_FLOPs(self):
+        drop_last = True
+        sample_loader = CustomDataLoader(
+            config = self.config,
+            dataset=self.dataset_valid,
+            batch_size=16,
+            num_workers=0,
+            drop_last=drop_last,
+            shuffle=True,
+            collate_fn=collate_fn_mmg,
+        )
+        #print(self.dataset_train[0][0].unsqueeze(0).shape)
+        loader = iter(sample_loader)
+        item = next(loader)
+        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
+        inputs = (obj_points, obj_2d_feats, edge_indices, descriptor, batch_ids, False)
+        #kwargs = {'descriptor': descriptor, 'batch_ids':batch_ids,'istrain': False}
+        return FlopCountAnalysis(self.model, inputs)
 
     def pointnet_pruning(self, debug_mode = False):
         
@@ -362,20 +379,20 @@ class MMGNet():
         
         # gcn_2d[depth] pruning
         for idx in range(0,self.mconfig.N_LAYERS):
-            ignore_layers = [self.model.mmg.gcn_2ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_2ds[idx].edgeatten.proj_value, self.model.mmg.gcn_2ds[idx].edgeatten.proj_query]
+            ignore_layers = [self.model.mmg.gcn_2ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_2ds[idx].edgeatten.proj_value]
             gcn_2ds_base_ops, gcn_2ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input)
             
             print(f'gcn_2d[{idx}]_base_ops: {gcn_2ds_base_ops}, gcn_2d[{idx}]_origin_params_count: {gcn_2ds_origin_params_count}')
-            gcn_2ds_pruner = self.get_pruner(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input, num_classes=self.num_obj_class, ignored_layers=ignore_layers)
+            gcn_2ds_pruner = self.get_pruner(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
             self.go_prune(prun_type, "gcn_2ds",gcn_2ds_pruner, gcn_example_input, gcn_2ds_base_ops, gcn_2ds_origin_params_count, idx)
 
         # gcn_3d[depth] pruning
         for idx in range(0,self.mconfig.N_LAYERS):
-            ignore_layers = [self.model.mmg.gcn_3ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_3ds[idx].edgeatten.proj_value, self.model.mmg.gcn_3ds[idx].edgeatten.proj_query]
+            ignore_layers = [self.model.mmg.gcn_3ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_3ds[idx].edgeatten.proj_value]
             gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input)
             
             print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-            gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=self.num_obj_class, ignored_layers=ignore_layers)
+            gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
             self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
 

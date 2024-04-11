@@ -2,7 +2,7 @@
   "_NAME": ["SGFN", "Mmgnet"],
   "MODEL_PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/src/model/model.py",
   "NAME": "Mmgnet",
-  "PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/output",
+  "PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/config",
   "multi_view_root": "/home/knuvi/hojun/CVPR2023-VLSAT/",
   "VERBOSE": false,
   "SEED": 2020,

@@ -48,71 +48,48 @@ def main():
     
     if config.MODE == 'prune':
         #model.load(best=True)
-        # Create example inputs
-        obj_points_example = torch.randn(2, 3, 1000)  # Assuming [batch_size, dim_point, num_points]
-        obj_2d_feats_example = torch.randn(2, 512, 1500)  # Assuming [batch_size, dim_2d_feats, num_relations]
-        edge_indices_example = torch.randint(0, 1000, (2, 1500))  # Assuming [2, num_edges]
-        descriptor_example = torch.randn(2, 11)  # Assuming [batch_size, dim_descriptor]
-        batch_ids_example = torch.randint(0, 2, (2,))  # Assuming [batch_size]
-        istrain_example = False
-
-        # Ensure the inputs are in the correct format for the model's forward method
-        # Note: descriptor and batch_ids are optional arguments, so they need to be passed as keyword arguments
-        inputs = (obj_points_example, obj_2d_feats_example, edge_indices_example)
-        kwargs = {'descriptor': descriptor_example, 'batch_ids': batch_ids_example, 'istrain': istrain_example}
-        
-        flop_analysis = FlopCountAnalysis(model.model, inputs, kwargs)
-        print(f' FLOPs: {flop_analysis.total()}')
+        flops = model.calc_FLOPs().total()
+        origin_flops = flops / 1e9
+        print(f"Current paramters: 27162021 || FLOPs: {origin_flops:.4f} billion FLOPs")
         
         acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc = 55.36, 78.44, 85.87
         acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc = 89.83, 98.5, 99.51
         acc50_triplet_acc, acc100_triplet_acc = 89.36, 92.16
-        print(f'Current paramters: 27162021')
-        
         print('start pruning...')
-        #model.pointnet_pruning()
 
-        print(f'After encoder pruning paramters: {count_parameters(model.model)}')
+        # encoder pruning        
+        # model.pointnet_pruning()
+        # print(f'After encoder pruning paramters: {count_parameters(model.model)}')
 
-        #model.gnn_pruning()
-        print(f'After gcn pruning paramters: {count_parameters(model.model)}')
+        # gnn pruning
+        model.gnn_pruning()
         
+        flops = model.calc_FLOPs().total()
+        pruned_flops = flops / 1e9
+        pruned_para = count_parameters(model.model)
+        print(f"After gcn pruning paramters:  {pruned_para} || FLOPs: {pruned_flops:.4f} billion FLOPs")
         
-    #   current_speed_up, ori_ops, ori_size, pruned_ops, pruned_size = model.pointnet_pruning()
-        
-        # print('\nstart training...\n')
-        # model.train()
-        # pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc, _ = model.validation()
-        
-
-        # save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
-        # os.makedirs(save_path, exist_ok=True)
-        # f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
-        # # print(f'current_speed_up: {current_speed_up}, pruned_size: {pruned_size}', file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc1_rel_cls_acc, pruned_acc1_rel_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc3_rel_cls_acc, pruned_acc3_rel_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc5_rel_cls_acc, pruned_acc5_rel_cls_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc50_triplet_acc, pruned_acc50_triplet_acc), file=f_in)
-        # print("Acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
+        print('\nstart training...\n')
+        model.train()
+        pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc, _ = model.validation()
         
 
-        # print(
-        #     "Params: {:.2f} M => {:.2f} M ({:.2f}%)".format(
-        #         ori_size / 1e6, pruned_size / 1e6, pruned_size / ori_size * 100
-        #     ),file=f_in)
+        save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
+        os.makedirs(save_path, exist_ok=True)
+        f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
         
-        # print("FLOPs: {:.2f} M => {:.2f} M ({:.2f}%, {:.2f}X )".format(
-        #         ori_ops / 1e6,
-        #         pruned_ops / 1e6,
-        #         pruned_ops / ori_ops * 100,
-        #         ori_ops / pruned_ops,
-        #         ),file=f_in)
+        print(f"Current paramters: 27162021 || FLOPs: {origin_flops:.4f} billion FLOPs", file=f_in)
+        print(f"After gcn pruning paramters:  {pruned_para} || FLOPs: {pruned_flops:.4f} billion FLOPs", file=f_in)
+        print("Acc@1/obj_cls_acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
+        print("Acc@5/obj_cls_acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
+        print("Acc@10/obj_cls_acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)
+        print("Acc@1/rel_cls_acc: {:.4f} => {:.4f}".format(acc1_rel_cls_acc, pruned_acc1_rel_cls_acc), file=f_in)
+        print("Acc@3/rel_cls_acc: {:.4f} => {:.4f}".format(acc3_rel_cls_acc, pruned_acc3_rel_cls_acc), file=f_in)
+        print("Acc@5/rel_cls_acc: {:.4f} => {:.4f}".format(acc5_rel_cls_acc, pruned_acc5_rel_cls_acc), file=f_in)
+        print("Acc@50/triplet_acc: {:.4f} => {:.4f}".format(acc50_triplet_acc, pruned_acc50_triplet_acc), file=f_in)
+        print("Acc@100/triplet_acc: {:.4f} => {:.4f}".format(acc100_triplet_acc, pruned_acc100_triplet_acc), file=f_in)
         
-        # f_in.close()
-
+        f_in.close()
         exit()
     try:
         model.load()
