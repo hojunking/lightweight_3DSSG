@@ -50,7 +50,6 @@ def main():
         #model.load(best=True)
         flops = model.calc_FLOPs().total()
         origin_flops = flops / 1e9
-        print(f"Current paramters: 27162021 || FLOPs: {origin_flops:.4f} billion FLOPs")
         
         acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc = 55.36, 78.44, 85.87
         acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc = 89.83, 98.5, 99.51
@@ -58,17 +57,22 @@ def main():
         print('start pruning...')
 
         # encoder pruning        
-        # model.pointnet_pruning()
-        # print(f'After encoder pruning paramters: {count_parameters(model.model)}')
+        model.encoder_pruning()
+        #print(f'After encoder pruning paramters: {count_parameters(model.model)}')
 
         # gnn pruning
-        model.gnn_pruning()
+        #model.gnn_pruning()
+
+        # classificer pruning
+        #model.classifier_pruning()
         
         flops = model.calc_FLOPs().total()
         pruned_flops = flops / 1e9
         pruned_para = count_parameters(model.model)
-        print(f"After gcn pruning paramters:  {pruned_para} || FLOPs: {pruned_flops:.4f} billion FLOPs")
-        
+        print(f"Pruning ratio: {config.pruning_pointnet.pruning_ratio}")
+        print(f"Origin paramters: {27162021} || FLOPs: {origin_flops:.4f} billion FLOPs")
+        print(f"After pruning paramters:  {pruned_para} || FLOPs: {pruned_flops:.4f} billion FLOPs")
+        print(f"Diff parameter: {27162021 - pruned_para} || FLOPs: {origin_flops-pruned_flops:.4f} billion FLOPs ")
         print('\nstart training...\n')
         model.train()
         pruned_acc1_obj_cls_acc, pruned_acc5_obj_cls_acc, pruned_acc10_obj_cls_acc, pruned_acc1_rel_cls_acc, pruned_acc3_rel_cls_acc, pruned_acc5_rel_cls_acc, pruned_acc50_triplet_acc, pruned_acc100_triplet_acc, _ = model.validation()
@@ -78,8 +82,10 @@ def main():
         os.makedirs(save_path, exist_ok=True)
         f_in = open(os.path.join(save_path, 'result_pruned.txt'), 'w')
         
-        print(f"Current paramters: 27162021 || FLOPs: {origin_flops:.4f} billion FLOPs", file=f_in)
-        print(f"After gcn pruning paramters:  {pruned_para} || FLOPs: {pruned_flops:.4f} billion FLOPs", file=f_in)
+        print(f"Pruning ratio: {config.pruning_pointnet.pruning_ratio}", file=f_in)
+        print(f"Origin paramters: 27162021 || FLOPs: {origin_flops:.4f} billion FLOPs", file=f_in)
+        print(f"After pruning paramters:  {pruned_para} || FLOPs: {pruned_flops:.4f} billion FLOPs", file=f_in)
+        print(f"Diff parameter: {27162021 - pruned_para} || FLOPs: {origin_flops-pruned_flops:.4f} billion FLOPs", file=f_in)
         print("Acc@1/obj_cls_acc: {:.4f} => {:.4f}".format(acc1_obj_cls_acc, pruned_acc1_obj_cls_acc), file=f_in)
         print("Acc@5/obj_cls_acc: {:.4f} => {:.4f}".format(acc5_obj_cls_acc, pruned_acc5_obj_cls_acc), file=f_in)
         print("Acc@10/obj_cls_acc: {:.4f} => {:.4f}".format(acc10_obj_cls_acc, pruned_acc10_obj_cls_acc), file=f_in)

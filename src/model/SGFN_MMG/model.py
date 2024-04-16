@@ -323,11 +323,17 @@ class Mmgnet_teacher(BaseModel):
         # gcn_edge_feature_3d_dis = self.triplet_projector_3d(gcn_edge_feature_3d_dis)
         gcn_edge_feature_2d_dis = self.triplet_projector_2d(gcn_edge_feature_2d_dis)
 
+
+        #print(f'rel_predictor_2d input: {gcn_edge_feature_2d.shape}')
+        #print(f'rel_predictor_3d input: {gcn_edge_feature_3d.shape}')
+
         rel_cls_3d = self.rel_predictor_3d(gcn_edge_feature_3d)
         rel_cls_2d = self.rel_predictor_2d(gcn_edge_feature_2d)
 
         logit_scale = self.obj_logit_scale.exp()
 
+        #print(f'obj_predictor_3d input: {gcn_obj_feature_3d.shape}')
+        #print(f'obj_predictor_2d input: {gcn_obj_feature_2d.shape}')
         obj_logits_3d = logit_scale * self.obj_predictor_3d(gcn_obj_feature_3d / gcn_obj_feature_3d.norm(dim=-1, keepdim=True))
         obj_logits_2d = logit_scale * self.obj_predictor_2d(gcn_obj_feature_2d / gcn_obj_feature_2d.norm(dim=-1, keepdim=True))
 

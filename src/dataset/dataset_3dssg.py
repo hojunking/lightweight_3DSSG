@@ -39,7 +39,7 @@ def load_mesh(path,label_file,use_rgb,use_normal):
     result=dict()
     if label_file == 'labels.instances.align.annotated.v2.ply' or label_file == 'labels.instances.align.annotated.ply':
         
-        print(path)
+        #print(path)
         plydata = trimesh.load(os.path.join(path,label_file), process=False)
         points = np.array(plydata.vertices)
         instances = util_ply.read_labels(plydata).flatten()

@@ -77,7 +77,7 @@ class MMGNet():
         num_rel_class = len(self.dataset_valid.relationNames)
         self.num_obj_class = num_obj_class
         self.num_rel_class = num_rel_class
-        
+        #print(num_rel_class)
 #        self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
 #        self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
 #        self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
@@ -179,6 +179,7 @@ class MMGNet():
         
         # Here we fix iterative_steps=200 to prune the model progressively with small steps 
         # until the required speed up is achieved.
+        print("ignored layers: ", ignored_layers)
         pruner = pruner_entry(
             model,
             example_inputs,
@@ -259,7 +260,7 @@ class MMGNet():
             loader = iter(train_loader)
             self.save()
 
-            if ('VALID_INTERVAL' in self.config and self.config.VALID_INTERVAL > 0 and self.model.epoch % self.config.VALID_INTERVAL == 0):
+            if (self.model.epoch > 20 and 'VALID_INTERVAL' in self.config and self.config.VALID_INTERVAL > 0 and self.model.epoch % self.config.VALID_INTERVAL == 0):
                 print('start validation...')
                 _, _, _, _, _, _, _, _, rel_acc_val = self.validation()
                 self.model.eva_res = rel_acc_val
@@ -289,11 +290,31 @@ class MMGNet():
     def save(self):
         self.model.save ()
 
+
+    def calc_FLOPs(self):
+        drop_last = True
+        sample_loader = CustomDataLoader(
+            config = self.config,
+            dataset=self.dataset_valid,
+            batch_size=16,
+            num_workers=0,
+            drop_last=drop_last,
+            shuffle=True,
+            collate_fn=collate_fn_mmg,
+        )
+        #print(self.dataset_train[0][0].unsqueeze(0).shape)
+        loader = iter(sample_loader)
+        item = next(loader)
+        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
+        inputs = (obj_points, obj_2d_feats, edge_indices, descriptor, batch_ids, False)
+        #kwargs = {'descriptor': descriptor, 'batch_ids':batch_ids,'istrain': False}
+        return FlopCountAnalysis(self.model, inputs)
+    
     def go_prune(self, prun_type, model_name ,pruner, example_inputs, base_ops, origin_param_count, idx=0):
         current_speed_up = 1
         pruned_ratio = 0
-        if prun_type == "encoder":
-            print('prune encoder', model_name)
+        if prun_type == "pointnet":
+            print('prune pointnet', model_name)
             while pruned_ratio < self.pruning_ratio:
                 
                 pruner.step()
@@ -318,29 +339,10 @@ class MMGNet():
             raise NotImplementedError
         print(f'en_current_speed_up: {current_speed_up}, pruned_ratio: {pruned_ratio}\n')
 
-    def calc_FLOPs(self):
-        drop_last = True
-        sample_loader = CustomDataLoader(
-            config = self.config,
-            dataset=self.dataset_valid,
-            batch_size=16,
-            num_workers=0,
-            drop_last=drop_last,
-            shuffle=True,
-            collate_fn=collate_fn_mmg,
-        )
-        #print(self.dataset_train[0][0].unsqueeze(0).shape)
-        loader = iter(sample_loader)
-        item = next(loader)
-        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
-        inputs = (obj_points, obj_2d_feats, edge_indices, descriptor, batch_ids, False)
-        #kwargs = {'descriptor': descriptor, 'batch_ids':batch_ids,'istrain': False}
-        return FlopCountAnalysis(self.model, inputs)
-
-    def pointnet_pruning(self, debug_mode = False):
+    def encoder_pruning(self, debug_mode = False):
         
         print('===  Pointnet (encoder) Pruning   ===')
-        prun_type = "encoder"
+        prun_type = "pointnet"
         ''' obj_encoder pruning'''
         # random input example
         obj_encoder_input_example = torch.randn(138, 3, 128).to(self.config.DEVICE)
@@ -355,17 +357,15 @@ class MMGNet():
         self.go_prune(prun_type,"obj_encoder",obj_encoder_pruner, obj_encoder_input_example, encoder_base_ops, encoder_origin_params_count)
         
         ''' rel_encoder 2d/3d pruning'''
-        rel_encoder_2d_example = torch.randn(1070, 11, 1).to(self.config.DEVICE)
-        rel_encoder_3d_example = torch.randn(1070, 11, 1).to(self.config.DEVICE)
-        rel_encoder_2d_prunner = self.get_pruner(self.model.rel_encoder_2d, example_inputs=rel_encoder_2d_example, num_classes=self.num_obj_class, ignored_layers=[self.model.rel_encoder_2d.conv3])
-        rel_encoder_3d_prunner = self.get_pruner(self.model.rel_encoder_3d, example_inputs=rel_encoder_3d_example, num_classes=self.num_obj_class, ignored_layers=[self.model.rel_encoder_3d.conv3])
-        rel_encoder_3d_base_ops, rel_encoder_3d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_encoder_3d, example_inputs=rel_encoder_3d_example)
-        rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_encoder_2d, example_inputs=rel_encoder_2d_example)
-        self.go_prune(prun_type, "rel_encoder_2d",rel_encoder_2d_prunner, rel_encoder_2d_example, rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count)
-        self.go_prune(prun_type, "rel_encoder_3d",rel_encoder_3d_prunner, rel_encoder_3d_example, rel_encoder_3d_base_ops, rel_encoder_3d_origin_params_count)
+        # rel_encoder_2d_example = torch.randn(1070, 11, 1).to(self.config.DEVICE)
+        # rel_encoder_3d_example = torch.randn(1070, 11, 1).to(self.config.DEVICE)
+        # rel_encoder_2d_prunner = self.get_pruner(self.model.rel_encoder_2d, example_inputs=rel_encoder_2d_example, num_classes=self.num_obj_class, ignored_layers=[self.model.rel_encoder_2d.conv3])
+        # rel_encoder_3d_prunner = self.get_pruner(self.model.rel_encoder_3d, example_inputs=rel_encoder_3d_example, num_classes=self.num_obj_class, ignored_layers=[self.model.rel_encoder_3d.conv3])
+        # rel_encoder_3d_base_ops, rel_encoder_3d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_encoder_3d, example_inputs=rel_encoder_3d_example)
+        # rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_encoder_2d, example_inputs=rel_encoder_2d_example)
+        # self.go_prune(prun_type, "rel_encoder_2d",rel_encoder_2d_prunner, rel_encoder_2d_example, rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count)
+        # self.go_prune(prun_type, "rel_encoder_3d",rel_encoder_3d_prunner, rel_encoder_3d_example, rel_encoder_3d_base_ops, rel_encoder_3d_origin_params_count)
 
-        # pruned_ops, pruned_size = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=example_inputs)
-    
     
     def gnn_pruning(self, debug_mode = False):
         prun_type = "mmg"
@@ -395,14 +395,32 @@ class MMGNet():
             gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
             self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
+    def classifier_pruning(self, debug_mode = False):
+        prun_type = "pointnet"
+        print('===  Pointnet (classifier) Pruning   ===')
+        
+        # random input example
+        rel_pred_3d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
+        rel_pred_2d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
 
+        # get pruner 
+        rel_pred_3d_pruner = self.get_pruner(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example, num_classes=26, ignored_layers=[])
+        rel_pred_2d_pruner = self.get_pruner(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example, num_classes=26, ignored_layers=[])
+        
+        # get base ops and origin params count
+        rel_pred_3d_base_ops, rel_pred_3d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example)
+        rel_pred_2d_base_ops, rel_pred_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example)
+        
+        # start pruning
+        self.go_prune(prun_type,"rel_predictor_3d",rel_pred_3d_pruner, rel_pred_3d_input_example, rel_pred_3d_base_ops, rel_pred_3d_origin_params_count)
+        self.go_prune(prun_type,"rel_predictor_2d",rel_pred_2d_pruner, rel_pred_2d_input_example, rel_pred_2d_base_ops, rel_pred_2d_origin_params_count)
 
     def validation(self, debug_mode = False):
         
         val_loader = CustomDataLoader(
             config = self.config,
             dataset=self.dataset_valid,
-            batch_size=1,
+            batch_size=16,
             num_workers=self.config.WORKERS,
             drop_last=False,
             shuffle=False,
