@@ -11,6 +11,8 @@ from torch.utils.tensorboard import SummaryWriter
 from src.dataset.DataLoader import (CustomDataLoader, collate_fn_mmg)
 from src.dataset.dataset_builder import build_dataset
 from src.model.SGFN_MMG.model import Mmgnet, Mmgnet_teacher
+from src.model.SGFN_MMG.baseline_sgfn import SGFN
+from src.model.SGFN_MMG.baseline_sgpn import SGPN
 from src.utils import op_utils
 from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
 # pruning
@@ -18,11 +20,15 @@ import torch_pruning as tp
 from functools import partial
 import torch.nn.functional as F
 from fvcore.nn import FlopCountAnalysis
+import torch.nn.utils.prune as prune
+from prettytable import PrettyTable
+
 import time
 class MMGNet():
     def __init__(self, config):
         self.config = config
         self.model_name = self.config.NAME
+        print(f'model name : {self.model_name}')
         self.mconfig = mconfig = config.MODEL
         self.exp = config.exp
         self.save_res = config.EVAL
@@ -60,6 +66,11 @@ class MMGNet():
                                       use_normal=mconfig.USE_NORMAL)
             dataset = self.dataset_valid
 
+        num_obj_class = len(self.dataset_valid.classNames)   
+        num_rel_class = len(self.dataset_valid.relationNames)
+        self.num_obj_class = num_obj_class
+        self.num_rel_class = num_rel_class
+
         if config.MODE  == 'train':
             self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
             self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
@@ -73,17 +84,16 @@ class MMGNet():
             self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
             self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
 
-        num_obj_class = len(self.dataset_valid.classNames)   
-        num_rel_class = len(self.dataset_valid.relationNames)
-        self.num_obj_class = num_obj_class
-        self.num_rel_class = num_rel_class
-        #print(num_rel_class)
-#        self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
-#        self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
-#        self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
-        
         ''' Build Model '''
-        self.model = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        if self.model_name == 'mmg':
+            self.model = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        elif self.model_name == 'sgfn':
+            self.model = SGFN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        elif self.model_name == 'sgpn':
+            self.model = SGPN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        else:
+            print(f'Unknown model name: {self.model_name}')
+            raise NotImplementedError
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -324,24 +334,37 @@ class MMGNet():
                 current_speed_up = float(base_ops) / pruned_ops
                 if pruner.current_step == pruner.iterative_steps:
                     break
-        elif prun_type == "mmg":
+            
+        elif prun_type == "gcn":
             print(f'prune :{model_name}[{idx}]')
-            while pruned_ratio < self.pruning_ratio:
+            if self.model_name == 'sgfn':
+                while pruned_ratio < self.pruning_ratio:
+                    
+                    pruner.step()
+                    pruned_ops, params_count = tp.utils.count_ops_and_params(getattr(self.model.gcn, model_name)[idx], example_inputs=example_inputs)
+                    
+                    pruned_ratio = (origin_param_count - params_count) / origin_param_count
+                    current_speed_up = float(base_ops) / pruned_ops
+                    if pruner.current_step == pruner.iterative_steps:
+                        break
+            else:
+                while pruned_ratio < self.pruning_ratio:
                 
-                pruner.step()
-                pruned_ops, params_count = tp.utils.count_ops_and_params(getattr(self.model.mmg, model_name)[idx], example_inputs=example_inputs)
-                
-                pruned_ratio = (origin_param_count - params_count) / origin_param_count
-                current_speed_up = float(base_ops) / pruned_ops
-                if pruner.current_step == pruner.iterative_steps:
-                    break
+                    pruner.step()
+                    pruned_ops, params_count = tp.utils.count_ops_and_params(getattr(self.model.mmg, model_name)[idx], example_inputs=example_inputs)
+                    
+                    pruned_ratio = (origin_param_count - params_count) / origin_param_count
+                    current_speed_up = float(base_ops) / pruned_ops
+                    if pruner.current_step == pruner.iterative_steps:
+                        break
         else:
             raise NotImplementedError
         print(f'en_current_speed_up: {current_speed_up}, pruned_ratio: {pruned_ratio}\n')
 
     def encoder_pruning(self, debug_mode = False):
         
-        print('===  Pointnet (encoder) Pruning   ===')
+            
+        print(f'===  {self.model_name} (encoder) Pruning   ===')
         prun_type = "pointnet"
         ''' obj_encoder pruning'''
         # random input example
@@ -365,55 +388,159 @@ class MMGNet():
         # rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_encoder_2d, example_inputs=rel_encoder_2d_example)
         # self.go_prune(prun_type, "rel_encoder_2d",rel_encoder_2d_prunner, rel_encoder_2d_example, rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count)
         # self.go_prune(prun_type, "rel_encoder_3d",rel_encoder_3d_prunner, rel_encoder_3d_example, rel_encoder_3d_base_ops, rel_encoder_3d_origin_params_count)
-
-    
-    def gnn_pruning(self, debug_mode = False):
-        prun_type = "mmg"
-        print('===  mmgnet (GNN) Pruning   ===')
-
-        num_nodes, num_edges =100, 150
-        node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
-        edge_features_example = torch.randn(num_edges, 512).to(self.config.DEVICE)
-        edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
-        gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)
+    def gcn_pruning(self, debug_mode = False):
+        print(f'=== {self.model_name} (GCN) Pruning   ===')
+        prun_type = "gcn"
         
-        # gcn_2d[depth] pruning
-        for idx in range(0,self.mconfig.N_LAYERS):
-            ignore_layers = [self.model.mmg.gcn_2ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_2ds[idx].edgeatten.proj_value]
-            gcn_2ds_base_ops, gcn_2ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input)
+        if self.model_name == 'sgfn':
+            num_nodes, num_edges =130, 964
+            node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
+            edge_features_example = torch.randn(num_edges, 256).to(self.config.DEVICE)
+            edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
             
-            print(f'gcn_2d[{idx}]_base_ops: {gcn_2ds_base_ops}, gcn_2d[{idx}]_origin_params_count: {gcn_2ds_origin_params_count}')
-            gcn_2ds_pruner = self.get_pruner(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
-            self.go_prune(prun_type, "gcn_2ds",gcn_2ds_pruner, gcn_example_input, gcn_2ds_base_ops, gcn_2ds_origin_params_count, idx)
+            gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)
 
-        # gcn_3d[depth] pruning
-        for idx in range(0,self.mconfig.N_LAYERS):
-            ignore_layers = [self.model.mmg.gcn_3ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_3ds[idx].edgeatten.proj_value]
-            gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input)
+            # gcn[depth] pruning
+            for idx in range(0,self.mconfig.N_LAYERS):
+                ignore_layers = [self.model.gcn.gconvs[idx].edgeatten.proj_edge, self.model.gcn.gconvs[idx].edgeatten.proj_value, 
+                                self.model.gcn.gconvs[idx].edgeatten.nn_edge[2], self.model.gcn.gconvs[0].edgeatten.nn[3]]
+                gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
+                
+                print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
+                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
+                self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+        
+        ## vl-sat mmg pruning
+        else:
+            prun_type = "mmg"
+            num_nodes, num_edges =100, 150
+            node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
+            edge_features_example = torch.randn(num_edges, 512).to(self.config.DEVICE)
+            edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
+            gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)
             
-            print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-            gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
-            self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+            # gcn_2d[depth] pruning
+            for idx in range(0,self.mconfig.N_LAYERS):
+                ignore_layers = [self.model.mmg.gcn_2ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_2ds[idx].edgeatten.proj_value]
+                gcn_2ds_base_ops, gcn_2ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input)
+                
+                print(f'gcn_2d[{idx}]_base_ops: {gcn_2ds_base_ops}, gcn_2d[{idx}]_origin_params_count: {gcn_2ds_origin_params_count}')
+                gcn_2ds_pruner = self.get_pruner(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
+                self.go_prune(prun_type, "gcn_2ds",gcn_2ds_pruner, gcn_example_input, gcn_2ds_base_ops, gcn_2ds_origin_params_count, idx)
+
+            # gcn_3d[depth] pruning
+            for idx in range(0,self.mconfig.N_LAYERS):
+                ignore_layers = [self.model.mmg.gcn_3ds[idx].edgeatten.proj_edge, self.model.mmg.gcn_3ds[idx].edgeatten.proj_value]
+                gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input)
+                
+                print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
+                gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
+                self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+    
         
     def classifier_pruning(self, debug_mode = False):
+        print(f'===  {self.model_name} (classifier) Pruning   ===')
         prun_type = "pointnet"
-        print('===  Pointnet (classifier) Pruning   ===')
         
-        # random input example
-        rel_pred_3d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
-        rel_pred_2d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
+        if self.model_name == 'sgfn':
+            # random input example
+            obj_pred_input_example = torch.randn(130, 512).to(self.config.DEVICE)
+            rel_pred_input_example = torch.randn(964, 256).to(self.config.DEVICE)
 
-        # get pruner 
-        rel_pred_3d_pruner = self.get_pruner(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example, num_classes=26, ignored_layers=[])
-        rel_pred_2d_pruner = self.get_pruner(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example, num_classes=26, ignored_layers=[])
-        
-        # get base ops and origin params count
-        rel_pred_3d_base_ops, rel_pred_3d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example)
-        rel_pred_2d_base_ops, rel_pred_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example)
-        
-        # start pruning
-        self.go_prune(prun_type,"rel_predictor_3d",rel_pred_3d_pruner, rel_pred_3d_input_example, rel_pred_3d_base_ops, rel_pred_3d_origin_params_count)
-        self.go_prune(prun_type,"rel_predictor_2d",rel_pred_2d_pruner, rel_pred_2d_input_example, rel_pred_2d_base_ops, rel_pred_2d_origin_params_count)
+            # get pruner 
+            obj_pred_pruner = self.get_pruner(self.model.obj_predictor, example_inputs=obj_pred_input_example, num_classes=160, ignored_layers=[])
+            rel_pred_pruner = self.get_pruner(self.model.rel_predictor, example_inputs=rel_pred_input_example, num_classes=26, ignored_layers=[])
+            
+            # get base ops and origin params count
+            obj_pred_base_ops, obj_pred_origin_params_count = tp.utils.count_ops_and_params(self.model.obj_predictor, example_inputs=obj_pred_input_example)
+            rel_pred_base_ops, rel_pred_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor, example_inputs=rel_pred_input_example)
+            
+            # start pruning
+            self.go_prune(prun_type,"obj_predictor",obj_pred_pruner, obj_pred_input_example, obj_pred_base_ops, obj_pred_origin_params_count)
+            self.go_prune(prun_type,"rel_predictor",rel_pred_pruner, rel_pred_input_example, rel_pred_base_ops, rel_pred_origin_params_count)
+        ## VL-SAT classifier
+        else:
+            # random input example
+            rel_pred_3d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
+            rel_pred_2d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
+
+            # get pruner 
+            rel_pred_3d_pruner = self.get_pruner(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example, num_classes=26, ignored_layers=[])
+            rel_pred_2d_pruner = self.get_pruner(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example, num_classes=26, ignored_layers=[])
+            
+            # get base ops and origin params count
+            rel_pred_3d_base_ops, rel_pred_3d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example)
+            rel_pred_2d_base_ops, rel_pred_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example)
+            
+            # start pruning
+            self.go_prune(prun_type,"rel_predictor_3d",rel_pred_3d_pruner, rel_pred_3d_input_example, rel_pred_3d_base_ops, rel_pred_3d_origin_params_count)
+            self.go_prune(prun_type,"rel_predictor_2d",rel_pred_2d_pruner, rel_pred_2d_input_example, rel_pred_2d_base_ops, rel_pred_2d_origin_params_count)
+    
+    
+    def apply_pruning(self, apply_part):
+        if apply_part == "encoder":
+            encoders = ['obj_encoder', 'rel_encoder_2d', 'rel_encoder_3d']
+            for encoder_name in encoders:
+                print(f"encoder: {encoder_name} pruning:{self.pruning_ratio} start!")
+                for name, module in getattr(self.model, encoder_name).named_modules():
+                    if isinstance(module, torch.nn.Conv1d):
+                        prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                        prune.remove(module, 'weight')
+        elif apply_part == "gnn":
+            print("gnn pruning start")
+            gnn_name = 'mmg'
+            print(f"gnn: {gnn_name} pruning:{self.pruning_ratio} start!")
+            for name, module in getattr(self.model, gnn_name).named_modules():
+                if isinstance(module, torch.nn.Linear):
+                    prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    prune.remove(module, 'weight')
+        elif apply_part == "classifier":
+            print(f"classifier: {apply_part} pruning:{self.pruning_ratio} start!")
+            classifiers = ['obj_predictor_3d', 'rel_predictor_3d', 'obj_predictor_2d', 'rel_predictor_2d']
+            for predicator in classifiers:
+                for name, module in getattr(self.model, predicator).named_modules():
+                    if isinstance(module, torch.nn.Linear):
+                        prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                        prune.remove(module, 'weight')
+        elif apply_part == 'all':
+            print(f"ALL Pruning start!")
+            for name, module in self.model.named_modules():
+                if isinstance(module, torch.nn.Linear):
+                    prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    prune.remove(module, 'weight')
+                elif isinstance(module, torch.nn.Conv1d):
+                    prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    prune.remove(module, 'weight')
+        else:
+            print("pruning error!")
+        print(f"{apply_part} pruning success!")
+
+    def calculate_sparsity(self, pruning_result):
+        # visualize via table
+        table = PrettyTable(["Layer", "Total Parameters", "Non-zero Parameters", "Sparsity (%)"])
+        total_params = total_non_zero = 0
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                num_params = param.numel()
+                if name.endswith('weight'):
+                    non_zero_params = torch.count_nonzero(param).item()
+                else:
+                    non_zero_params = num_params
+                sparsity = 100.0 * (1 - non_zero_params / num_params)
+                table.add_row([name, num_params, non_zero_params, f"{sparsity:.2f}"])
+                total_params += num_params
+                total_non_zero += non_zero_params
+        total_sparsity = 100.0 * (1 - total_non_zero / total_params)
+        table.add_row(["Total", total_params, total_non_zero, f"{total_sparsity:.2f}"])
+        # save
+        save_path = os.path.join(self.config.PATH, 'pruning_ratio')
+        os.makedirs(save_path, exist_ok=True)
+        save_path = os.path.join(self.config.PATH, pruning_result)
+
+        with open(save_path, "w") as f:
+            f.write(str(table))
+        print(f"save_path: {save_path}")
+
 
     def validation(self, debug_mode = False):
         

@@ -114,8 +114,11 @@ class SGFN(BaseModel):
         rel_feature = self.rel_encoder(edge_feature)
         
         obj_center = descriptor[:,:3].clone()
+        #print(f'obj_feature: {obj_feature.shape}, obj_center: {obj_center.shape}, edge_indices: {edge_indices.shape}, batch_ids: {batch_ids.shape}')
+
         gcn_obj_feature, gcn_rel_feature, probs = self.gcn(obj_feature, rel_feature, edge_indices, obj_center, batch_ids)
 
+        #print(f'gcn_obj_feature: {gcn_obj_feature.shape}, gcn_rel_feature: {gcn_rel_feature.shape}')
         rel_cls = self.rel_predictor(gcn_rel_feature)
 
         obj_logits = self.obj_predictor(gcn_obj_feature)

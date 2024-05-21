@@ -1,12 +1,12 @@
 {
-  "_NAME": ["SGFN", "Mmgnet"],
-  "MODEL_PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/src/model/model.py",
-  "NAME": "Mmgnet",
-  "PATH": "/home/knuvi/hojun/CVPR2023-VLSAT/config",
-  "multi_view_root": "/home/knuvi/hojun/CVPR2023-VLSAT/",
+  "_NAME": ["SGFN", "Mmgnet", "SGPN"],
+  "MODEL_PATH": "/home/hojun/git/VLSAT_pruning/src/model/model.py",
+  "NAME": "SGPN",
+  "PATH": "/home/hojun/git/VLSAT_pruning/config",
+  "multi_view_root": "/home/hojun/git/VLSAT_pruning/",
   "VERBOSE": false,
   "SEED": 2020,
-  "MAX_EPOCHES": 80,
+  "MAX_EPOCHES": 200,
   "LR": 0.0001,
   "W_DECAY": false,
   "AMSGRAD":false,
@@ -57,12 +57,12 @@
     "NUM_HEADS": 8,
     "use_pretrain":"",
     "use_descriptor": true,
-    "obj_label_path":"/home/knuvi/hojun/CVPR2023-VLSAT/data/3DSSG_subset/classes.txt",
-    "rel_label_path":"/home/knuvi/hojun/CVPR2023-VLSAT/data/3DSSG_subset/relations.txt",
-    "adapter_path":"/home/knuvi/hojun/CVPR2023-VLSAT/clip_adapter/checkpoint/origin_mean.pth"
+    "obj_label_path":"/home/hojun/git/VLSAT_pruning/data/3DSSG_subset/classes.txt",
+    "rel_label_path":"/home/hojun/git/VLSAT_pruning/data/3DSSG_subset/relations.txt",
+    "adapter_path":"/home/hojun/git/VLSAT_pruning/clip_adapter/checkpoint/origin_mean.pth"
   },
   "dataset": {
-    "root": "/home/knuvi/hojun/CVPR2023-VLSAT/data/3DSSG_subset",
+    "root": "/home/hojun/git/VLSAT_pruning/data/3DSSG_subset",
     "selection": "",
     "use_data_augmentation": false,
     "ignore_scannet_rel": true,
@@ -99,15 +99,5 @@
     "global_pruning":true,
     "sl_lr_decay_milestones":"60,80",
     "iterative_steps":400
-  },
-  "pruning_tf":{
-    "prune": false,
-    "taylor_batchs":10,
-    "pruning_ratio":0.7,
-    "bottleneck":false,
-    "pruning_type":"l1",
-    "global_pruning":false,
-    "prune_num_heads":false,
-    "head_pruning_ratio":0.0
   }
 }

@@ -12,6 +12,7 @@ config/ckp/
 config/config/
 config/logs/
 config/results/
+config/*.txt
 #src/utils/eva_utils_acc.py
 #utils/define.py
 #data/pointcloud2image.py

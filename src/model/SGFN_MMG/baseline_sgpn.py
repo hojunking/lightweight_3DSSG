@@ -6,6 +6,7 @@ from src.model.model_utils.model_base import BaseModel
 from utils import op_utils
 from src.utils.eva_utils_acc import get_gt, evaluate_topk_object, evaluate_topk_predicate, evaluate_triplet_topk
 from src.model.model_utils.network_GNN import GraphEdgeAttenNetworkLayers
+from src.model.model_utils.network_TripletGCN import TripletGCNModel
 from src.model.model_utils.network_PointNet import PointNetfeat, PointNetCls, PointNetRelCls, PointNetRelClsMulti
 
 class SGPN(BaseModel):
@@ -36,8 +37,18 @@ class SGPN(BaseModel):
         if mconfig.USE_CONTEXT:
             dim_point_rel += 1
 
+        dim_f_spatial = dim_descriptor
+        dim_point_rel = dim_f_spatial
+
+        self.dim_point=dim_point
+        self.dim_edge=dim_point_rel
+        self.num_class=num_obj_class
+        self.num_rel=num_rel_class
+        self.flow = 'target_to_source'
+        self.clip_feat_dim = self.config.MODEL.clip_feat_dim
+
         dim_point_feature = 512
-        
+
         # Object Encoder
         self.obj_encoder = PointNetfeat(
             global_feat=True, 
@@ -56,8 +67,14 @@ class SGPN(BaseModel):
             feature_transform=mconfig.feature_transform,
             out_size=mconfig.edge_feature_size)
         
-
-        self.obj_predictor = PointNetCls(num_obj_class, in_size=dim_point_feature,
+        self.gcn = TripletGCNModel(
+            num_layers=self.mconfig.N_LAYERS,
+            dim_node=mconfig.point_feature_size,
+            dim_edge=mconfig.edge_feature_size,
+            dim_hidden=mconfig.point_feature_size,
+            use_bn=with_bn)
+        
+        self.obj_predictor = PointNetCls(num_obj_class, in_size=512,
                                  batch_norm=with_bn, drop_out=True)
 
         if mconfig.multi_rel_outputs:
@@ -82,22 +99,29 @@ class SGPN(BaseModel):
         self.optimizer.zero_grad()
 
 
-    def forward(self, obj_points, rel_points):
+    def forward(self, obj_points, obj_2d_feats, edge_indices, descriptor=None, batch_ids=None, istrain=False):
 
         obj_feature = self.obj_encoder(obj_points)
         
-        rel_feature = self.rel_encoder(rel_points)
+        ''' Create edge feature '''
+        with torch.no_grad():
+            edge_feature = op_utils.Gen_edge_descriptor(flow=self.flow)(descriptor, edge_indices)
+
+
+        rel_feature = self.rel_encoder(edge_feature)
+
+        obj_feature, rel_feature = self.gcn(obj_feature, rel_feature, edge_indices)
 
         rel_cls = self.rel_predictor(rel_feature)
 
         obj_logits = self.obj_predictor(obj_feature)
 
         return obj_logits, rel_cls
-
-    def process_train(self, obj_points, gt_cls, rel_points, gt_rel_cls, edge_indices):
+        
+    def process_train(self, obj_points, obj_2d_feats, gt_cls, descriptor, gt_rel_cls, edge_indices, batch_ids=None, with_log=False, ignore_none_rel=False, weights_obj=None, weights_rel=None):
         self.iteration +=1    
         
-        obj_pred, rel_pred = self(obj_points, rel_points)
+        obj_pred, rel_pred = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(),descriptor, batch_ids, istrain=True)
         
         # compute loss for obj
         loss_obj = F.nll_loss(obj_pred, gt_cls)
