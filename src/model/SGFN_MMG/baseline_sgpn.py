@@ -110,6 +110,7 @@ class SGPN(BaseModel):
 
         rel_feature = self.rel_encoder(edge_feature)
 
+        #print(f'obj_feature: {obj_feature.shape}, rel_feature: {rel_feature.shape}, edge_indices: {edge_indices.shape}')
         obj_feature, rel_feature = self.gcn(obj_feature, rel_feature, edge_indices)
 
         rel_cls = self.rel_predictor(rel_feature)

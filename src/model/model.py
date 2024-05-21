@@ -164,22 +164,12 @@ class MMGNet():
             pruner_entry = partial(tp.pruner.GrowingRegPruner, reg=self.prune_reg, delta_reg=self.prune_delta_reg, global_pruning=self.config.global_pruning)
         else:
             raise NotImplementedError
-        # print(f'prune method: {self.prune_method}')
-        # print(f'prune speed up: {self.prune_speed_up}')
-        # print(f'prune max pruning ratio: {self.prune_max_pruning_ratio}')
-        # print(f'prune soft keeping ratio: {self.prune_soft_keeping_ratio}')
-        # print(f'prune reg: {self.prune_reg}')
-        # print(f'prune delta reg: {self.prune_delta_reg}')
-        # print(f'prune weight decay: {self.prune_weight_decay}')
-        # print(f'prune global pruning: {self.prune_global_pruning}')
-        # print(f'prune sl lr decay milestones: {self.prune_sl_lr_decay_milestones}')
-        # print(f'prune sparsity learning: {self.config.pruning_pointnet.sparsity_learning}')
-        # print(f'prune iterative steps: {self.config.pruning_pointnet.iterative_steps}')
-
         #args.is_accum_importance = is_accum_importance
         unwrapped_parameters = []
         #ignored_layers = []
         pruning_ratio_dict = {}
+        #print("before add ignored layers: ", ignored_layers)
+
         # ignore output layers
         for m in model.modules():
             if isinstance(m, torch.nn.Linear) and m.out_features == num_classes:
@@ -337,7 +327,7 @@ class MMGNet():
             
         elif prun_type == "gcn":
             print(f'prune :{model_name}[{idx}]')
-            if self.model_name == 'sgfn':
+            if self.model_name == 'sgfn' or 'sgpn':
                 while pruned_ratio < self.pruning_ratio:
                     
                     pruner.step()
@@ -403,16 +393,37 @@ class MMGNet():
             # gcn[depth] pruning
             for idx in range(0,self.mconfig.N_LAYERS):
                 ignore_layers = [self.model.gcn.gconvs[idx].edgeatten.proj_edge, self.model.gcn.gconvs[idx].edgeatten.proj_value, 
-                                self.model.gcn.gconvs[idx].edgeatten.nn_edge[2], self.model.gcn.gconvs[0].edgeatten.nn[3]]
+                                self.model.gcn.gconvs[idx].edgeatten.nn_edge[2]]
+                print(ignore_layers)
                 gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
                 gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
                 self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
+        elif self.model_name == 'sgpn':
+            num_nodes, num_edges = 136, 1048
+            node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
+            edge_features_example = torch.randn(num_edges, 256).to(self.config.DEVICE)
+            edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
+            gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)
+
+            ignore_layers = []
+            for idx in range(0,self.mconfig.N_LAYERS):
+                for name, module in self.model.gcn.gconvs[idx].named_modules():
+                    if name == 'nn1.2' and isinstance(module, torch.nn.Linear):
+                        ignore_layers.append(module)
+                    if name == 'nn2.2' and isinstance(module, torch.nn.Linear):
+                        ignore_layers.append(module)
+
+                gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
+                
+                print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
+                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=1, ignored_layers=ignore_layers)
+                self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+        
         ## vl-sat mmg pruning
         else:
-            prun_type = "mmg"
             num_nodes, num_edges =100, 150
             node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
             edge_features_example = torch.randn(num_edges, 512).to(self.config.DEVICE)
@@ -442,7 +453,7 @@ class MMGNet():
         print(f'===  {self.model_name} (classifier) Pruning   ===')
         prun_type = "pointnet"
         
-        if self.model_name == 'sgfn':
+        if self.model_name == 'sgfn' or 'sgpn':
             # random input example
             obj_pred_input_example = torch.randn(130, 512).to(self.config.DEVICE)
             rel_pred_input_example = torch.randn(964, 256).to(self.config.DEVICE)

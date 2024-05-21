@@ -57,21 +57,16 @@ def main():
         if config.pruning_part == 'encoder':
             print("처리중인 모델 파트: Encoder")
             model.encoder_pruning()
-        
-        elif config.pruning_part == 'mmg':
-            print("처리중인 모델 파트: mmg")
-            model.mmg_pruning()
-            # 여기에 GCN 작업을 수행할 코드
-        elif config.pruning_part == 'classifier':
-            print("처리중인 모델 파트: Classifier")
-            model.classifier_pruning()
-            # 여기에 Classifier 작업을 수행할 코드
         elif config.pruning_part == 'gcn':
             print("처리중인 모델 파트: GCN")
             model.gcn_pruning()
-        elif config.pruning_part == 'predictor':
-            model.predictors_pruning()
-
+        elif config.pruning_part == 'classifier':
+            print("처리중인 모델 파트: Classifier")
+            model.classifier_pruning()
+        elif config.pruning_part == 'all':
+            model.encoder_pruning()
+            model.gcn_pruning()
+            model.classifier_pruning()
         else:
             print("Error: Unknown model part specified.")
             exit()
