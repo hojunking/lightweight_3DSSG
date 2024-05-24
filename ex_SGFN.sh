@@ -6,13 +6,13 @@ run_command() {
 # Call the function with different sets of arguments
 
 # Run 1
-run_command prune prune encoder sgfn ./config/mmgnet.json
+#run_command prune st_enco_prune50 encoder sgfn ./config/mmgnet.json
 
 # Run 2
-run_command prune prune gcn sgfn ./config/mmgnet.json
+#run_command prune st_gcn_prune50 gcn sgfn ./config/mmgnet.json
 
 # Run 3
-run_command train prune classifier sgfn ./config/mmgnet.json
+run_command prune st_classif_prune50 classifier sgfn ./config/mmgnet.json
 
 # Run 4
-run_command train prune all sgfn ./config/mmgnet.json
+run_command prune st_all_prune50 all sgfn ./config/mmgnet.json

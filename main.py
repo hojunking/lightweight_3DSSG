@@ -48,7 +48,7 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        #model.load(best=True)
+        model.load(best=True)
         
         before_param = count_parameters(model.model)
         
@@ -96,7 +96,7 @@ def main():
 
         save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
         os.makedirs(save_path, exist_ok=True)
-        f_in = open(os.path.join(save_path, 'results.txt'), 'w')
+        f_in = open(os.path.join(save_path, 'prune_results.txt'), 'w')
         
         print(f"Structured pruning ratio: {config.pruning_pointnet.pruning_ratio}", file=f_in)
         print(f"After pruning paramters:  {param} || FLOPs: {flops:.4f} billion FLOPs", file=f_in)
