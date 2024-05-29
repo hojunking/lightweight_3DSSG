@@ -53,6 +53,7 @@ def main():
         before_param = count_parameters(model.model)
         
         print('start pruning...')
+        
         """ Structured pruning"""
         if config.pruning_part == 'encoder':
             print("처리중인 모델 파트: Encoder")
@@ -71,7 +72,7 @@ def main():
             print("Error: Unknown model part specified.")
             exit()
 
-        ## Calculate FLOPs and parameters
+        # ## Calculate FLOPs and parameters
         flops = model.calc_FLOPs().total()
         flops = flops / 1e9
         param = count_parameters(model.model)
@@ -82,10 +83,10 @@ def main():
         
         # model.apply_pruning("encoder")
         # model.apply_pruning("gnn")
-        #model.apply_pruning("classifier")
+        # model.apply_pruning("classifier")
         #model.apply_pruning("all")
         #pruning_result = config.exp +'.txt'
-        # model.apply_pruning_origin(model.config.pruning_ratio ,pruning_result)
+        #model.apply_pruning_origin(model.config.pruning_ratio ,pruning_result)
         #model.calculate_sparsity(pruning_result)
 
 
@@ -139,6 +140,7 @@ def load_config():
     parser.add_argument('--exp', type=str)
     parser.add_argument('--part', type=str)
     parser.add_argument('--model', type=str)
+    parser.add_argument('--ratio', type=str)
 
     args = parser.parse_args()
     config_path = os.path.abspath(args.config)
@@ -162,6 +164,7 @@ def load_config():
     config.NAME = args.model
     config.exp = args.exp
     config.pruning_part = args.part
+    config.pruning_ratio = float(args.ratio)
 
     return config
 

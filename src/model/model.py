@@ -33,12 +33,13 @@ class MMGNet():
         self.exp = config.exp
         self.save_res = config.EVAL
         self.update_2d = config.update_2d
-        
+        self.masks = {}
+
         ''' Pruning_pointnet config '''
         self.prune_method = config.pruning_pointnet.method
         self.prune_speed_up = config.pruning_pointnet.speed_up
         self.prune_max_pruning_ratio = config.pruning_pointnet.max_pruning_ratio
-        self.pruning_ratio = config.pruning_pointnet.pruning_ratio
+        self.pruning_ratio = config.pruning_ratio
         self.prune_soft_keeping_ratio = config.pruning_pointnet.soft_keeping_ratio
         self.prune_reg = config.pruning_pointnet.reg
         self.prune_delta_reg = config.pruning_pointnet.delta_reg
@@ -85,7 +86,7 @@ class MMGNet():
             self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
 
         ''' Build Model '''
-        if self.model_name == 'mmg':
+        if self.model_name == 'Mmgnet':
             self.model = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         elif self.model_name == 'sgfn':
             self.model = SGFN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
@@ -266,6 +267,7 @@ class MMGNet():
                 self.model.eva_res = rel_acc_val
                 self.save()
             
+            self.track_pruned_weights()
             self.model.epoch += 1
             
             # if self.update_2d:
@@ -327,7 +329,7 @@ class MMGNet():
             
         elif prun_type == "gcn":
             print(f'prune :{model_name}[{idx}]')
-            if self.model_name == 'sgfn' or 'sgpn':
+            if self.model_name in ['sgfn', 'sgpn']:
                 while pruned_ratio < self.pruning_ratio:
                     
                     pruner.step()
@@ -338,6 +340,7 @@ class MMGNet():
                     if pruner.current_step == pruner.iterative_steps:
                         break
             else:
+                
                 while pruned_ratio < self.pruning_ratio:
                 
                     pruner.step()
@@ -424,6 +427,7 @@ class MMGNet():
         
         ## vl-sat mmg pruning
         else:
+            
             num_nodes, num_edges =100, 150
             node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
             edge_features_example = torch.randn(num_edges, 512).to(self.config.DEVICE)
@@ -496,6 +500,7 @@ class MMGNet():
                 for name, module in getattr(self.model, encoder_name).named_modules():
                     if isinstance(module, torch.nn.Conv1d):
                         prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                        
                         prune.remove(module, 'weight')
         elif apply_part == "gnn":
             print("gnn pruning start")
@@ -504,7 +509,9 @@ class MMGNet():
             for name, module in getattr(self.model, gnn_name).named_modules():
                 if isinstance(module, torch.nn.Linear):
                     prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')
+            print(f'masks: {self.masks}')
         elif apply_part == "classifier":
             print(f"classifier: {apply_part} pruning:{self.pruning_ratio} start!")
             classifiers = ['obj_predictor_3d', 'rel_predictor_3d', 'obj_predictor_2d', 'rel_predictor_2d']
@@ -512,19 +519,33 @@ class MMGNet():
                 for name, module in getattr(self.model, predicator).named_modules():
                     if isinstance(module, torch.nn.Linear):
                         prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                        
                         prune.remove(module, 'weight')
         elif apply_part == 'all':
             print(f"ALL Pruning start!")
             for name, module in self.model.named_modules():
                 if isinstance(module, torch.nn.Linear):
                     prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    
                     prune.remove(module, 'weight')
                 elif isinstance(module, torch.nn.Conv1d):
                     prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    
                     prune.remove(module, 'weight')
         else:
             print("pruning error!")
         print(f"{apply_part} pruning success!")
+
+
+    def track_pruned_weights(self):
+        for name, module in getattr(self.model, 'mmg').named_modules():
+            if name in self.masks:
+                mask = self.masks[name]
+                weight = module.weight.data
+                pruned_weights = weight[mask == 0]
+                print(f"Module: {name} | Pruned weights mean: {pruned_weights.mean().item()} | std: {pruned_weights.std().item()}")
+            # else:
+            #     print("No pruned weights found in the model.")
 
     def calculate_sparsity(self, pruning_result):
         # visualize via table
