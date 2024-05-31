@@ -2,7 +2,7 @@ if __name__ == '__main__' and __package__ is None:
     from os import sys
     sys.path.append('../')
 import copy
-import os
+import os, glob
 
 import numpy as np
 import torch
@@ -107,7 +107,21 @@ class MMGNet():
         
     def load(self, best=False):
         return self.model.load(best)
-        
+    
+    def init_named(self):
+        # 디렉토리 경로 설정
+        root_dir = os.path.join(self.config.PATH, 'ckp', self.model_name, self.exp)
+
+        # _best.pth 파일들의 목록을 가져오기
+        best_files = glob.glob(os.path.join(root_dir, '*_best.pth'))
+        print(best_files)
+        for file_path in best_files:
+            # 새 파일 이름 생성
+            new_file_path = file_path.replace('_best.pth', '_pre.pth')
+            # 파일 이름 변경
+            os.rename(file_path, new_file_path)
+
+
     @torch.no_grad()
     def data_processing_train(self, items):
         obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = items 
@@ -195,6 +209,7 @@ class MMGNet():
         return pruner
 
     def train(self):
+        self.init_named()
         ''' create data loader '''
         drop_last = True
         train_loader = CustomDataLoader(

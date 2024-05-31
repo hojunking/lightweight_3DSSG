@@ -1,7 +1,7 @@
 {
   "_NAME": ["SGFN", "Mmgnet", "SGPN"],
   "MODEL_PATH": "/home/hojun/git/VLSAT_pruning/src/model/model.py",
-  "NAME": "SGPN",
+  "NAME": "Mmgnet",
   "PATH": "/home/hojun/git/VLSAT_pruning/config",
   "multi_view_root": "/home/hojun/git/VLSAT_pruning/",
   "VERBOSE": false,

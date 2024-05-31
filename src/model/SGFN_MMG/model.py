@@ -217,6 +217,8 @@ class Mmgnet_teacher(BaseModel):
 
         return obj_text_features.float(), rel_text_features.float()
     
+
+
     def get_rel_emb(self, objs_target, rels_target, edges):
         
         target_rel_tokens, target_rel_feats = [], []
