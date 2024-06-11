@@ -28,7 +28,10 @@ class GraphEdgeAttenNetwork(torch.nn.Module):
         self.edgeatten = MultiHeadedEdgeAttention(
             dim_node=dim_node,dim_edge=dim_edge,dim_atten=dim_atten,
             num_heads=num_heads,use_bn=use_bn,attention=attention,use_edge=use_edge, **kwargs)
-        self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
+        # mlp reduction
+        #self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
+        self.prop = build_mlp([dim_node+dim_atten, dim_node],
+        
                             do_bn= use_bn, on_last=False)
 
     def forward(self, x, edge_feature, edge_index, weight=None, istrain=False):
@@ -56,8 +59,11 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
         self.d_o = d_o = dim_atten // num_heads
         self.num_heads = num_heads
         self.use_edge = use_edge
+        # mlp reduction
         self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        #self.nn_edge = build_mlp([dim_node*2+dim_edge,dim_edge], 
                           do_bn= use_bn, on_last=False)
+        
         self.mask_obj = 0.5
         
         DROP_OUT_ATTEN = None
@@ -161,6 +167,8 @@ class MultiHeadedEdgeAttention_student(torch.nn.Module):
         #edit2 - KD
         self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
         #self.nn_edge = build_mlp([dim_node*2+dim_edge,dim_edge],                         
+        #                   do_bn= use_bn, on_last=False)
+        #self.nn_edge = build_mlp([dim_node+dim_edge,dim_edge //2],                         
                           do_bn= use_bn, on_last=False)
         self.mask_obj = 0.5
         

@@ -8,7 +8,7 @@ if __name__ == '__main__':
     os.sys.path.append('./src')
 
 ## select process (origin, KD, pruning : model.py)
-from model.model import MMGNet
+from model.model_kd import MMGNet
 from src.utils.config import Config
 from utils import util
 import torch
@@ -55,39 +55,39 @@ def main():
         print('start pruning...')
         
         """ Structured pruning"""
-        if config.pruning_part == 'encoder':
-            print("처리중인 모델 파트: Encoder")
-            model.encoder_pruning()
-        elif config.pruning_part == 'gcn':
-            print("처리중인 모델 파트: GCN")
-            model.gcn_pruning()
-        elif config.pruning_part == 'classifier':
-            print("처리중인 모델 파트: Classifier")
-            model.classifier_pruning()
-        elif config.pruning_part == 'all':
-            model.encoder_pruning()
-            model.gcn_pruning()
-            model.classifier_pruning()
-        else:
-            print("Error: Unknown model part specified.")
-            exit()
+        # if config.pruning_part == 'encoder':
+        #     print("처리중인 모델 파트: Encoder")
+        #     model.encoder_pruning()
+        # elif config.pruning_part == 'gcn':
+        #     print("처리중인 모델 파트: GCN")
+        #     model.gcn_pruning()
+        # elif config.pruning_part == 'classifier':
+        #     print("처리중인 모델 파트: Classifier")
+        #     model.classifier_pruning()
+        # elif config.pruning_part == 'all':
+        #     model.encoder_pruning()
+        #     model.gcn_pruning()
+        #     model.classifier_pruning()
+        # else:
+        #     print("Error: Unknown model part specified.")
+        #     exit()
 
-        # ## Calculate FLOPs and parameters
-        flops = model.calc_FLOPs().total()
-        flops = flops / 1e9
-        param = count_parameters(model.model)
-        print(f"Pruning ratio: {config.pruning_pointnet.pruning_ratio}")
-        print(f"Before param: {before_param}, After pruning paramters: {param} || FLOPs: {flops:.4f} billion FLOPs")
+        # # ## Calculate FLOPs and parameters
+        # flops = model.calc_FLOPs().total()
+        # flops = flops / 1e9
+        # param = count_parameters(model.model)
+        # print(f"Pruning ratio: {config.pruning_pointnet.pruning_ratio}")
+        # print(f"Before param: {before_param}, After pruning paramters: {param} || FLOPs: {flops:.4f} billion FLOPs")
         
         """ Unstructured pruning"""
         
-        # model.apply_pruning("encoder")
-        # model.apply_pruning("gnn")
-        # model.apply_pruning("classifier")
+        #model.apply_pruning("encoder")
+        model.apply_pruning("gnn")
+        #model.apply_pruning("classifier")
         #model.apply_pruning("all")
-        #pruning_result = config.exp +'.txt'
+        pruning_result = config.exp +'.txt'
         #model.apply_pruning_origin(model.config.pruning_ratio ,pruning_result)
-        #model.calculate_sparsity(pruning_result)
+        model.calculate_sparsity(pruning_result)
 
 
         print('\nstart training...\n')
@@ -99,8 +99,8 @@ def main():
         os.makedirs(save_path, exist_ok=True)
         f_in = open(os.path.join(save_path, 'prune_results.txt'), 'w')
         
-        print(f"Structured pruning ratio: {config.pruning_pointnet.pruning_ratio}", file=f_in)
-        print(f"After pruning paramters:  {param} || FLOPs: {flops:.4f} billion FLOPs", file=f_in)
+        #print(f"Structured pruning ratio: {config.pruning_pointnet.pruning_ratio}", file=f_in)
+        #print(f"After pruning paramters:  {param} || FLOPs: {flops:.4f} billion FLOPs", file=f_in)
         print("Acc@1/obj_cls_acc: {:.4f}".format( acc1_obj_cls_acc), file=f_in)
         print("Acc@5/obj_cls_acc: {:.4f}".format( acc5_obj_cls_acc), file=f_in)
         print("Acc@10/obj_cls_acc: {:.4f}".format( acc10_obj_cls_acc), file=f_in)
@@ -117,12 +117,14 @@ def main():
     except:
         print('unable to load previous model.')
     print('\nstart training...\n')
-    model.train()
-    # we test the best model in the end
-    model.config.EVAL = True
-    print('start validation...')
-    model.load()
-    model.validation()
+    print('total_params:', sum(p.numel() for p in model.model.mmg.parameters() if p.requires_grad))
+    #model.train()
+
+    # # we test the best model in the end
+    # model.config.EVAL = True
+    # print('start validation...')
+    # model.load()
+    # model.validation()
 
 
 def count_parameters(model):

@@ -234,8 +234,8 @@ class MMGNet():
         ''' Resume data loader to the last read location '''
         loader = iter(train_loader)
                    
-        if self.mconfig.use_pretrain != "":
-            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
+        # if self.mconfig.use_pretrain != "":
+        #     self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
         
         for k, p in self.model.named_parameters():
             if p.requires_grad:
@@ -282,7 +282,7 @@ class MMGNet():
                 self.model.eva_res = rel_acc_val
                 self.save()
             
-            self.track_pruned_weights()
+            #self.track_pruned_weights()
             self.model.epoch += 1
             
             # if self.update_2d:
