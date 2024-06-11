@@ -95,6 +95,9 @@ class MMGNet():
         else:
             print(f'Unknown model name: {self.model_name}')
             raise NotImplementedError
+        
+        if self.mconfig.use_pretrain != "":
+            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=False)
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -107,6 +110,7 @@ class MMGNet():
         
     def load(self, best=False):
         return self.model.load(best)
+    
     
     def init_named(self):
         # 디렉토리 경로 설정
@@ -234,8 +238,7 @@ class MMGNet():
         ''' Resume data loader to the last read location '''
         loader = iter(train_loader)
                    
-        if self.mconfig.use_pretrain != "":
-            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
+        
         
         for k, p in self.model.named_parameters():
             if p.requires_grad:
@@ -705,8 +708,10 @@ class MMGNet():
 
         rel_acc_mean_1, rel_acc_mean_3, rel_acc_mean_5 = self.compute_mean_predicate(cls_matrix_list, topk_rel_list)
         rel_acc_2d_mean_1, rel_acc_2d_mean_3, rel_acc_2d_mean_5 = self.compute_mean_predicate(cls_matrix_list, topk_rel_2d_list)
-
-     
+        
+        
+        parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print(f"Parameters : {parameters}", file=f_in)
         print(f"Eval: 3d obj Acc@1  : {obj_acc_1}", file=f_in)   
         #print(f"Eval: 2d obj Acc@1: {obj_acc_2d_1}", file=f_in)
         print(f"Eval: 3d obj Acc@5  : {obj_acc_5}", file=f_in) 

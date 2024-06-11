@@ -28,8 +28,8 @@ class GraphEdgeAttenNetwork(torch.nn.Module):
         self.edgeatten = MultiHeadedEdgeAttention(
             dim_node=dim_node,dim_edge=dim_edge,dim_atten=dim_atten,
             num_heads=num_heads,use_bn=use_bn,attention=attention,use_edge=use_edge, **kwargs)
-        self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
-                            do_bn= use_bn, on_last=False)
+        self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],                             
+                              do_bn= use_bn, on_last=False)
 
     def forward(self, x, edge_feature, edge_index, weight=None, istrain=False):
         assert x.ndim == 2
