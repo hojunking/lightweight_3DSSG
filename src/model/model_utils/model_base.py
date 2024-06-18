@@ -128,7 +128,7 @@ class BaseModel(nn.Module):
             print('\tmodel loading failed!\n')
         return loaded
        
-    def load_pretrain_model(self, path, skip_names=["predictor"], is_freeze=True):    
+    def load_pretrain_model(self, path, skip_names=[], is_freeze=True):    
         loaded = True
         for name,model in self._modules.items():
             skip = False

@@ -95,6 +95,11 @@ class MMGNet():
         else:
             print(f'Unknown model name: {self.model_name}')
             raise NotImplementedError
+        
+        ## load pre-trained weights
+        if self.mconfig.use_pretrain != "":
+            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=False)
+
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -234,8 +239,7 @@ class MMGNet():
         ''' Resume data loader to the last read location '''
         loader = iter(train_loader)
                    
-        if self.mconfig.use_pretrain != "":
-            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
+        
         
         for k, p in self.model.named_parameters():
             if p.requires_grad:

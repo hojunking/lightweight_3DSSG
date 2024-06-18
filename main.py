@@ -48,7 +48,7 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        model.load(best=True)
+        #model.load(best=True)
         
         before_param = count_parameters(model.model)
         
@@ -76,7 +76,7 @@ def main():
         flops = model.calc_FLOPs().total()
         flops = flops / 1e9
         param = count_parameters(model.model)
-        print(f"Pruning ratio: {config.pruning_pointnet.pruning_ratio}")
+        print(f"Pruning ratio: {config.pruning_ratio}")
         print(f"Before param: {before_param}, After pruning paramters: {param} || FLOPs: {flops:.4f} billion FLOPs")
         
         """ Unstructured pruning"""
@@ -99,7 +99,7 @@ def main():
         os.makedirs(save_path, exist_ok=True)
         f_in = open(os.path.join(save_path, 'prune_results.txt'), 'w')
         
-        print(f"Structured pruning ratio: {config.pruning_pointnet.pruning_ratio}", file=f_in)
+        print(f"Structured pruning ratio: {config.pruning_ratio}", file=f_in)
         print(f"After pruning paramters:  {param} || FLOPs: {flops:.4f} billion FLOPs", file=f_in)
         print("Acc@1/obj_cls_acc: {:.4f}".format( acc1_obj_cls_acc), file=f_in)
         print("Acc@5/obj_cls_acc: {:.4f}".format( acc5_obj_cls_acc), file=f_in)
