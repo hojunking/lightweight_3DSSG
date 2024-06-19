@@ -15,4 +15,6 @@ run_command() {
 #run_command prune st_classif_prune50 classifier sgfn ./config/mmgnet.json
 
 # Run 4
-run_command prune origin_t3 gcn Mmgnet ./config/mmgnet.json 0.3
+#run_command prune origin_t3 gcn Mmgnet ./config/mmgnet.json 0.3
+
+run_command train p_redu25 gcn Mmgnet ./config/mmgnet.json 0.3

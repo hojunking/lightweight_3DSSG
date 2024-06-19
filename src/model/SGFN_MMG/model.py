@@ -73,8 +73,8 @@ class Mmgnet(BaseModel):
             out_size=512)
         
         self.mmg = MMG(
-            dim_node=512,
-            dim_edge=512,
+            dim_node=self.mconfig.point_feature_size,
+            dim_edge=self.mconfig.edge_feature_size,
             dim_atten=self.mconfig.DIM_ATTEN,
             depth=self.mconfig.N_LAYERS, 
             num_heads=self.mconfig.NUM_HEADS,
@@ -92,7 +92,9 @@ class Mmgnet(BaseModel):
         )
         
         self.triplet_projector_2d = torch.nn.Sequential(
+            #redu
             torch.nn.Linear(512 * 3, 512 * 2),
+            #torch.nn.Linear(512 * 2 + 256, 512 * 2),
             torch.nn.Dropout(0.5),
             torch.nn.ReLU(),
             torch.nn.Linear(512 * 2, 512)
@@ -111,12 +113,16 @@ class Mmgnet(BaseModel):
         
         if mconfig.multi_rel_outputs:
             self.rel_predictor_3d = PointNetRelClsMulti(
-                num_rel_class, 
+                num_rel_class,
+                #redu
                 in_size=512, 
+                #in_size = 256,
                 batch_norm=with_bn,drop_out=True)
             self.rel_predictor_2d = PointNetRelClsMulti(
-                num_rel_class, 
+                num_rel_class,
+                #redu
                 in_size=512, 
+                #in_size = 256, 
                 batch_norm=with_bn,drop_out=True)
         else:
             self.rel_predictor_3d = PointNetRelCls(

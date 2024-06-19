@@ -28,9 +28,12 @@ class GraphEdgeAttenNetwork(torch.nn.Module):
         self.edgeatten = MultiHeadedEdgeAttention(
             dim_node=dim_node,dim_edge=dim_edge,dim_atten=dim_atten,
             num_heads=num_heads,use_bn=use_bn,attention=attention,use_edge=use_edge, **kwargs)
-        # mlp reduction
-        #self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
-        self.prop = build_mlp([dim_node+dim_atten, dim_node],
+        #redu
+        self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
+        
+        #self.prop = build_mlp([dim_node+dim_atten, dim_node, dim_node],
+
+        #self.prop = build_mlp([dim_node+dim_atten, dim_node],
         
                             do_bn= use_bn, on_last=False)
 
@@ -59,9 +62,12 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
         self.d_o = d_o = dim_atten // num_heads
         self.num_heads = num_heads
         self.use_edge = use_edge
-        # mlp reduction
-        self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
-        #self.nn_edge = build_mlp([dim_node*2+dim_edge,dim_edge], 
+        
+        #redu point_dim 512 -> 256
+        #self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        #self.nn_edge = build_mlp([dim_node*3+dim_edge,(dim_node+dim_edge),dim_edge],
+
+        self.nn_edge = build_mlp([dim_node*3,dim_edge], 
                           do_bn= use_bn, on_last=False)
         
         self.mask_obj = 0.5
@@ -79,8 +85,9 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
                 self.nn = MLP([d_n+d_e, d_n+d_e, d_o],do_bn=use_bn,drop_out = DROP_OUT_ATTEN)
             else:
                 self.nn = MLP([d_n, d_n*2, d_o],do_bn=use_bn,drop_out = DROP_OUT_ATTEN)
-                
-            self.proj_edge  = build_mlp([dim_edge,dim_edge])
+            # redu  
+            #self.proj_edge  = build_mlp([dim_edge,dim_edge])
+            self.proj_edge  = build_mlp([dim_node,dim_edge])
             self.proj_query = build_mlp([dim_node,dim_node])
             self.proj_value = build_mlp([dim_node,dim_atten])
         elif self.attention == 'distance':

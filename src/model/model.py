@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.dataset.DataLoader import (CustomDataLoader, collate_fn_mmg)
 from src.dataset.dataset_builder import build_dataset
-from src.model.SGFN_MMG.model import Mmgnet, Mmgnet_teacher
+from src.model.SGFN_MMG.model import Mmgnet
 from src.model.SGFN_MMG.baseline_sgfn import SGFN
 from src.model.SGFN_MMG.baseline_sgpn import SGPN
 from src.utils import op_utils
@@ -87,7 +87,7 @@ class MMGNet():
 
         ''' Build Model '''
         if self.model_name == 'Mmgnet':
-            self.model = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+            self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         elif self.model_name == 'sgfn':
             self.model = SGFN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         elif self.model_name == 'sgpn':

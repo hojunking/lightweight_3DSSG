@@ -8,7 +8,7 @@ if __name__ == '__main__':
     os.sys.path.append('./src')
 
 ## select process (origin, KD, pruning : model.py)
-from model.model_kd import MMGNet
+from model.model import MMGNet
 from src.utils.config import Config
 from utils import util
 import torch
@@ -48,7 +48,7 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        #model.load(best=True)
+        model.load(best=True)
         
         before_param = count_parameters(model.model)
         
@@ -117,14 +117,14 @@ def main():
     except:
         print('unable to load previous model.')
     print('\nstart training...\n')
-    print('total_params:', sum(p.numel() for p in model.model.mmg.parameters() if p.requires_grad))
-    #model.train()
+    print('total_params:', count_parameters(model.model))
+    model.train()
 
-    # # we test the best model in the end
-    # model.config.EVAL = True
-    # print('start validation...')
-    # model.load()
-    # model.validation()
+    # we test the best model in the end
+    model.config.EVAL = True
+    print('start validation...')
+    model.load()
+    model.validation()
 
 
 def count_parameters(model):
