@@ -6,7 +6,7 @@
   "multi_view_root": "/home/knuvi/Desktop/song/VLSAT_pruning/",
   "VERBOSE": false,
   "SEED": 2020,
-  "MAX_EPOCHES": 100,
+  "MAX_EPOCHES": 1,
   "LR": 0.0001,
   "W_DECAY": false,
   "AMSGRAD":false,
