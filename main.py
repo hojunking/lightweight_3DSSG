@@ -52,7 +52,7 @@ def main():
         
         """ Structured pruning"""
         if config.pruning_method == 'st':
-            print("Pruning method: ", config.pruning_method)
+            print("Pruning method: Structured pruning")
             if config.pruning_part == 'encoder':
                 print("Structured pruning model part: Encoder")
                 model.encoder_pruning()
@@ -72,7 +72,7 @@ def main():
                 exit()
         elif config.pruning_method == 'unst':
             """ Unstructured pruning"""
-            print("Pruning method: ", config.pruning_method)
+            print("Pruning method: Unstructured pruning")
             if config.pruning_part == 'encoder':
                 print("Unstructured pruning model part: Encoder")
                 model.apply_pruning("encoder")
@@ -172,10 +172,11 @@ def load_config():
     config.MODE = args.mode
     config.NAME = args.model
     config.exp = args.exp
-    config.pruning_method = str(args.method)
     config.pruning_part = args.part
     if args.ratio:
         config.pruning_ratio = float(args.ratio)
+    if config.pruning_method:
+        config.pruning_method = args.method
 
     return config
 

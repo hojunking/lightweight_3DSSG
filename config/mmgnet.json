@@ -16,7 +16,7 @@
   "VALID_INTERVAL": 30,
   "LOG_INTERVAL": 100,
   "LOG_IMG_INTERVAL": 100,
-  "WORKERS": 12,
+  "WORKERS": 8,
   "Batch_Size": 8, 
   "update_2d": false,
   "EVAL": false,
