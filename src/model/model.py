@@ -513,7 +513,11 @@ class MMGNet():
     
     def apply_pruning(self, apply_part):
         if apply_part == "encoder":
-            encoders = ['obj_encoder', 'rel_encoder_2d', 'rel_encoder_3d']
+            if self.model_name == 'sgfn' or 'sgpn':
+                encoders = ['obj_encoder', 'rel_encoder']
+            # vlsat mmg
+            else:
+                encoders = ['obj_encoder', 'rel_encoder_2d', 'rel_encoder_3d']
             for encoder_name in encoders:
                 print(f"encoder: {encoder_name} pruning:{self.pruning_ratio} start!")
                 for name, module in getattr(self.model, encoder_name).named_modules():
@@ -523,8 +527,13 @@ class MMGNet():
                         prune.remove(module, 'weight')
         elif apply_part == "gnn":
             print("gnn pruning start")
-            gnn_name = 'mmg'
+            
+            if self.model_name == 'sgfn' or 'sgpn':
+                gnn_name = 'gcn'
+            else:
+                gnn_name = 'mmg'
             print(f"gnn: {gnn_name} pruning:{self.pruning_ratio} start!")
+            
             for name, module in getattr(self.model, gnn_name).named_modules():
                 if isinstance(module, torch.nn.Linear):
                     prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
@@ -716,6 +725,7 @@ class MMGNet():
         print(f"Experiment: {self.exp}", file=f_in)
         print(f"Model : {self.model_name}")
         if self.config.pruning_ratio:
+            print(f"Pruning part: {self.config.pruning_ratio}", file=f_in)
             print(f"Pruning ratio: {self.config.pruning_ratio}", file=f_in)
         
         print(f"Eval: 3d obj Acc@1  : {obj_acc_1}", file=f_in)   

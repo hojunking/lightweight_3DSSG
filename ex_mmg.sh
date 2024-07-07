@@ -1,6 +1,6 @@
 #!/bin/bash
 run_command() {
-    python -m main --mode $1 --exp $2 --part $3 --model $4 --config $5 --ratio $6
+    python -m main --mode $1 --exp $2 --part $3 --model $4 --config $5 --ratio $6 --method $7
 }
 
 # Call the function with different sets of arguments
@@ -17,4 +17,5 @@ run_command() {
 # Run 4
 #run_command prune origin_t3 gcn Mmgnet ./config/mmgnet.json 0.3
 
-run_command train test gcn Mmgnet ./config/mmgnet.json 0
+run_command train test gcn Mmgnet ./config/mmgnet.json 0 unst
+## method : st, unst

@@ -47,78 +47,71 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        #model.load(best=True)
-        
-        before_param = count_parameters(model.model)
-        
         print('start pruning...')
+        print("Pruning method: ", config.pruning_method)
         
         """ Structured pruning"""
-        if config.pruning_part == 'encoder':
-            print("처리중인 모델 파트: Encoder")
-            model.encoder_pruning()
-        elif config.pruning_part == 'gcn':
-            print("처리중인 모델 파트: GCN")
-            model.gcn_pruning()
-        elif config.pruning_part == 'classifier':
-            print("처리중인 모델 파트: Classifier")
-            model.classifier_pruning()
-        elif config.pruning_part == 'all':
-            model.encoder_pruning()
-            model.gcn_pruning()
-            model.classifier_pruning()
-        else:
-            print("Error: Unknown model part specified.")
+        if config.pruning_method == 'st':
+            print("Pruning method: ", config.pruning_method)
+            if config.pruning_part == 'encoder':
+                print("Structured pruning model part: Encoder")
+                model.encoder_pruning()
+            elif config.pruning_part == 'gcn':
+                print("Structured Pruning model part: GCN")
+                model.gcn_pruning()
+            elif config.pruning_part == 'classifier':
+                print("Structured Pruning model part: Classifier")
+                model.classifier_pruning()
+            elif config.pruning_part == 'all':
+                print("Structured Pruning model part: Encoder,GCN, Classifier")
+                model.encoder_pruning()
+                model.gcn_pruning()
+                model.classifier_pruning()
+            else:
+                print("Error: Unknown model part specified.")
+                exit()
+        elif config.pruning_method == 'unst':
+            """ Unstructured pruning"""
+            print("Pruning method: ", config.pruning_method)
+            if config.pruning_part == 'encoder':
+                print("Unstructured pruning model part: Encoder")
+                model.apply_pruning("encoder")
+            elif config.pruning_part == 'gcn':
+                print("Unstructured Pruning model part: GCN")
+                model.apply_pruning("gnn")
+            elif config.pruning_part == 'classifier':
+                print("Unstructured Pruning model part: Classifier")
+                model.apply_pruning("classifier")
+            elif config.pruning_part == 'all':
+                print("Unstructured Pruning model part: Encoder,GCN, Classifier")
+                model.apply_pruning("encoder")
+                model.apply_pruning("gnn")
+                model.apply_pruning("classifier")
+            else:
+                print("Error: Unknown model part specified.")
+                exit()
+            pruning_result = config.exp +'.txt'
+            model.calculate_sparsity(pruning_result)
+        else :
+            print("Error: Unknown pruning method specified.")
             exit()
-
-        # ## Calculate FLOPs and parameters
-        flops = model.calc_FLOPs().total()
-        flops = flops / 1e9
-        param = count_parameters(model.model)
-        print(f"Pruning ratio: {config.pruning_ratio}")
-        print(f"Before param: {before_param}, After pruning paramters: {param} || FLOPs: {flops:.4f} billion FLOPs")
         
-        """ Unstructured pruning"""
-        
-        #model.apply_pruning("encoder")
-        #model.apply_pruning("gnn")
-        #model.apply_pruning("classifier")
-        #model.apply_pruning("all")
-        #pruning_result = config.exp +'.txt'
-        #model.apply_pruning_origin(model.config.pruning_ratio ,pruning_result)
-        #model.calculate_sparsity(pruning_result)
 
         ## After pruning, we need to retrain the model
-        print('\nstart training...\n')
+        print('\n=========After pruning start training==========\n')
         model.train()
         
         ## After retraining, we need to validate the model
         model.load()
         model.config.EVAL = True
-        acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc, acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc, acc50_triplet_acc, acc100_triplet_acc, _ = model.validation()
-        
+        model.validation()
 
-        save_path = os.path.join(config.PATH, "results", config.NAME, config.exp)
-        os.makedirs(save_path, exist_ok=True)
-        f_in = open(os.path.join(save_path, 'prune_results.txt'), 'w')
-        
-        print(f"pruning ratio: {config.pruning_ratio}", file=f_in)
-        print(f"After pruning paramters:  {param} || FLOPs: {flops:.4f} billion FLOPs", file=f_in)
-        print("Acc@1/obj_cls_acc: {:.4f}".format( acc1_obj_cls_acc), file=f_in)
-        print("Acc@5/obj_cls_acc: {:.4f}".format( acc5_obj_cls_acc), file=f_in)
-        print("Acc@10/obj_cls_acc: {:.4f}".format( acc10_obj_cls_acc), file=f_in)
-        print("Acc@1/rel_cls_acc: {:.4f}".format( acc1_rel_cls_acc), file=f_in)
-        print("Acc@3/rel_cls_acc: {:.4f}".format( acc3_rel_cls_acc), file=f_in)
-        print("Acc@5/rel_cls_acc: {:.4f}".format( acc5_rel_cls_acc), file=f_in)
-        print("Acc@50/triplet_acc: {:.4f}".format( acc50_triplet_acc), file=f_in)
-        print("Acc@100/triplet_acc: {:.4f}".format( acc100_triplet_acc), file=f_in)
-        
-        f_in.close()
         exit()
     try:
         model.load()
     except:
         print('unable to load previous model.')
+    
     print('\nstart training...\n')
     print('total_params:', count_parameters(model.model))
     flops = model.calc_FLOPs().total()
@@ -154,6 +147,7 @@ def load_config():
     parser.add_argument('--model', type=str)
     parser.add_argument('--ratio', type=str)
 
+
     args = parser.parse_args()
     config_path = os.path.abspath(args.config)
 
@@ -178,7 +172,7 @@ def load_config():
     config.MODE = args.mode
     config.NAME = args.model
     config.exp = args.exp
-    config.prune_method = args.method
+    config.pruning_method = str(args.method)
     config.pruning_part = args.part
     if args.ratio:
         config.pruning_ratio = float(args.ratio)
