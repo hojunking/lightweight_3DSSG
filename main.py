@@ -13,7 +13,6 @@ from src.utils.config import Config
 from utils import util
 import torch
 import argparse
-from fvcore.nn import FlopCountAnalysis
 
 def main():
     config = load_config()
@@ -48,7 +47,7 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        model.load(best=True)
+        #model.load(best=True)
         
         before_param = count_parameters(model.model)
         
@@ -81,17 +80,21 @@ def main():
         
         """ Unstructured pruning"""
         
-        # model.apply_pruning("encoder")
-        # model.apply_pruning("gnn")
-        # model.apply_pruning("classifier")
+        #model.apply_pruning("encoder")
+        #model.apply_pruning("gnn")
+        #model.apply_pruning("classifier")
         #model.apply_pruning("all")
         #pruning_result = config.exp +'.txt'
         #model.apply_pruning_origin(model.config.pruning_ratio ,pruning_result)
         #model.calculate_sparsity(pruning_result)
 
-
+        ## After pruning, we need to retrain the model
         print('\nstart training...\n')
         model.train()
+        
+        ## After retraining, we need to validate the model
+        model.load()
+        model.config.EVAL = True
         acc1_obj_cls_acc, acc5_obj_cls_acc, acc10_obj_cls_acc, acc1_rel_cls_acc, acc3_rel_cls_acc, acc5_rel_cls_acc, acc50_triplet_acc, acc100_triplet_acc, _ = model.validation()
         
 
@@ -99,7 +102,7 @@ def main():
         os.makedirs(save_path, exist_ok=True)
         f_in = open(os.path.join(save_path, 'prune_results.txt'), 'w')
         
-        print(f"Structured pruning ratio: {config.pruning_ratio}", file=f_in)
+        print(f"pruning ratio: {config.pruning_ratio}", file=f_in)
         print(f"After pruning paramters:  {param} || FLOPs: {flops:.4f} billion FLOPs", file=f_in)
         print("Acc@1/obj_cls_acc: {:.4f}".format( acc1_obj_cls_acc), file=f_in)
         print("Acc@5/obj_cls_acc: {:.4f}".format( acc5_obj_cls_acc), file=f_in)
@@ -117,13 +120,19 @@ def main():
     except:
         print('unable to load previous model.')
     print('\nstart training...\n')
+    print('total_params:', count_parameters(model.model))
+    flops = model.calc_FLOPs().total()
+    flops = flops / 1e9
+    print(f'total_flops: {flops:.4f} billion FLOPs')
     model.train()
+
     # we test the best model in the end
     model.config.EVAL = True
     print('start validation...')
     model.load()
     model.validation()
-
+    #flops = flops / 1e9
+    print(f'total_flops: {flops:.4f} billion FLOPs')
 
 def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -133,17 +142,23 @@ def load_config():
     r"""loads model config
 
     """
+
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--config', type=str, default='config_example.json', help='configuration file name. Relative path under given path (default: config.yml)')
     parser.add_argument('--loadbest', type=int, default=0,choices=[0,1], help='1: load best model or 0: load checkpoints. Only works in non training mode.')
     parser.add_argument('--mode', type=str, choices=['train','trace','eval','prune'], help='mode. can be [train,trace,eval]',required=True)
     parser.add_argument('--exp', type=str)
+    parser.add_argument('--method', type=str)
     parser.add_argument('--part', type=str)
     parser.add_argument('--model', type=str)
     parser.add_argument('--ratio', type=str)
 
     args = parser.parse_args()
     config_path = os.path.abspath(args.config)
+
+    if args.mode == 'prune' and not args.ratio:
+        parser.error("--ratio is required when --mode is 'prune'")
 
     if not os.path.exists(config_path):
         raise RuntimeError('Targer config file does not exist. {}' & config_path)
@@ -163,8 +178,10 @@ def load_config():
     config.MODE = args.mode
     config.NAME = args.model
     config.exp = args.exp
+    config.prune_method = args.method
     config.pruning_part = args.part
-    config.pruning_ratio = float(args.ratio)
+    if args.ratio:
+        config.pruning_ratio = float(args.ratio)
 
     return config
 

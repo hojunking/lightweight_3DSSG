@@ -110,22 +110,22 @@ class SSGDatasetGraph(data.Dataset):
         self.w_cls_rel /= self.w_cls_rel.max()
      
         # print some info
-        print('=== {} classes ==='.format(len(self.classNames)))
-        for i in range(len(self.classNames)):
-            print('|{0:>2d} {1:>20s}'.format(i,self.classNames[i]),end='')
-            if self.w_cls_obj is not None:
-                print(':{0:>1.3f}|'.format(self.w_cls_obj[i]),end='')
-            if (i+1) % 2 ==0:
-                print('')
-        print('')
-        print('=== {} relationships ==='.format(len(self.relationNames)))
-        for i in range(len(self.relationNames)):
-            print('|{0:>2d} {1:>20s}'.format(i,self.relationNames[i]),end=' ')
-            if self.w_cls_rel is not None:
-                print('{0:>1.3f}|'.format(self.w_cls_rel[i]),end='')
-            if (i+1) % 2 ==0:
-                print('')
-        print('')
+        # print('=== {} classes ==='.format(len(self.classNames)))
+        # for i in range(len(self.classNames)):
+        #     print('|{0:>2d} {1:>20s}'.format(i,self.classNames[i]),end='')
+        #     if self.w_cls_obj is not None:
+        #         print(':{0:>1.3f}|'.format(self.w_cls_obj[i]),end='')
+        #     if (i+1) % 2 ==0:
+        #         print('')
+        # print('')
+        # print('=== {} relationships ==='.format(len(self.relationNames)))
+        # for i in range(len(self.relationNames)):
+        #     print('|{0:>2d} {1:>20s}'.format(i,self.relationNames[i]),end=' ')
+        #     if self.w_cls_rel is not None:
+        #         print('{0:>1.3f}|'.format(self.w_cls_rel[i]),end='')
+        #     if (i+1) % 2 ==0:
+        #         print('')
+        # print('')
         
         # compile json file
         self.relationship_json, self.objs_json, self.scans = self.read_relationship_json(data, selected_scans)

@@ -2,7 +2,7 @@ if __name__ == '__main__' and __package__ is None:
     from os import sys
     sys.path.append('../')
 import copy
-import os, glob
+import os, glob, time
 
 import numpy as np
 import torch
@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.dataset.DataLoader import (CustomDataLoader, collate_fn_mmg)
 from src.dataset.dataset_builder import build_dataset
-from src.model.SGFN_MMG.model import Mmgnet, Mmgnet_teacher
+from src.model.SGFN_MMG.model import Mmgnet
 from src.model.SGFN_MMG.baseline_sgfn import SGFN
 from src.model.SGFN_MMG.baseline_sgpn import SGPN
 from src.utils import op_utils
@@ -34,7 +34,7 @@ class MMGNet():
         self.save_res = config.EVAL
         self.update_2d = config.update_2d
         self.masks = {}
-
+        self.start_time, self.end_time = 0, 0
         ''' Pruning_pointnet config '''
         self.prune_method = config.pruning_pointnet.method
         self.prune_speed_up = config.pruning_pointnet.speed_up
@@ -87,7 +87,7 @@ class MMGNet():
 
         ''' Build Model '''
         if self.model_name == 'Mmgnet':
-            self.model = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+            self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         elif self.model_name == 'sgfn':
             self.model = SGFN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         elif self.model_name == 'sgpn':
@@ -96,8 +96,10 @@ class MMGNet():
             print(f'Unknown model name: {self.model_name}')
             raise NotImplementedError
         
+        ## load pre-trained weights
         if self.mconfig.use_pretrain != "":
             self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=False)
+            print(f'load pretrain model: {self.mconfig.use_pretrain}')
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -213,6 +215,7 @@ class MMGNet():
         return pruner
 
     def train(self):
+        self.start_time = time.time()
         self.init_named()
         ''' create data loader '''
         drop_last = True
@@ -238,11 +241,9 @@ class MMGNet():
         ''' Resume data loader to the last read location '''
         loader = iter(train_loader)
                    
-        
-        
-        for k, p in self.model.named_parameters():
-            if p.requires_grad:
-                print(f"Para {k} need grad")
+        # for k, p in self.model.named_parameters():
+        #     if p.requires_grad:
+        #         print(f"Para {k} need grad")
         ''' Train '''
         while(keep_training):
 
@@ -285,7 +286,7 @@ class MMGNet():
                 self.model.eva_res = rel_acc_val
                 self.save()
             
-            self.track_pruned_weights()
+            #self.track_pruned_weights()
             self.model.epoch += 1
             
             # if self.update_2d:
@@ -686,6 +687,8 @@ class MMGNet():
             np.save(os.path.join(save_path,'obj_scores_list.npy'), obj_scores_list)
             np.save(os.path.join(save_path,'rel_scores_list.npy'), rel_scores_list)
             f_in = open(os.path.join(save_path, 'result.txt'), 'w')
+            self.end_time = time.time()
+
         else:
             f_in = None   
         
@@ -709,9 +712,12 @@ class MMGNet():
         rel_acc_mean_1, rel_acc_mean_3, rel_acc_mean_5 = self.compute_mean_predicate(cls_matrix_list, topk_rel_list)
         rel_acc_2d_mean_1, rel_acc_2d_mean_3, rel_acc_2d_mean_5 = self.compute_mean_predicate(cls_matrix_list, topk_rel_2d_list)
         
+        ## save results
+        print(f"Experiment: {self.exp}", file=f_in)
+        print(f"Model : {self.model_name}")
+        if self.config.pruning_ratio:
+            print(f"Pruning ratio: {self.config.pruning_ratio}", file=f_in)
         
-        parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-        print(f"Parameters : {parameters}", file=f_in)
         print(f"Eval: 3d obj Acc@1  : {obj_acc_1}", file=f_in)   
         #print(f"Eval: 2d obj Acc@1: {obj_acc_2d_1}", file=f_in)
         print(f"Eval: 3d obj Acc@5  : {obj_acc_5}", file=f_in) 
@@ -745,16 +751,18 @@ class MMGNet():
         print(f"Eval: 3d all-zero-shot recall@50 : {all_zero_shot_recall[0]}", file=f_in)
         print(f"Eval: 3d all-zero-shot recall@100: {all_zero_shot_recall[1]}", file=f_in)
         
+        ## calculate flops
+        flops = self.model.calc_FLOPs().total()
+        flops = flops / 1e9
+        print(f'\nTotal Flops: {flops:.4f} billion FLOPs', file=f_in)
+        
+        # calculate total parameters
+        param = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print(f'Total Parameters: {param:,}', file=f_in)
 
-        average_inference_time_per_data = total_inference_time / len(val_loader)
-        # Convert seconds to hour:minute:second
-        hours, remainder = divmod(total_inference_time, 3600)
-        minutes, seconds = divmod(remainder, 60)
+        # total time
+        print(f'Total Training Time: {self.end_time - self.start_time:.2f} sec', file=f_in)
 
-        # Format and print the time
-        formatted_time = "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
-        print(f"Eval: Total inference time: {formatted_time}",file=f_in)
-        print(f"Average_inference_time_per_data: {average_inference_time_per_data}",file=f_in)
 
         if self.model.config.EVAL:
             f_in.close()

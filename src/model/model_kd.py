@@ -10,9 +10,12 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.dataset.DataLoader import (CustomDataLoader, collate_fn_mmg)
 from src.dataset.dataset_builder import build_dataset
-from src.model.SGFN_MMG.model import Mmgnet, Mmgnet_teacher
+from src.model.SGFN_MMG.model import Mmgnet
+from src.model.SGFN_MMG.baseline_sgfn import SGFN
+from src.model.SGFN_MMG.baseline_sgpn import SGPN
 from src.utils import op_utils
 from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
+from fvcore.nn import FlopCountAnalysis
 
 import time
 class MMGNet():
@@ -53,6 +56,7 @@ class MMGNet():
             self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_valid) // self.config.Batch_Size)
             self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_valid) // self.config.Batch_Size)
 
+       
 
         num_obj_class = len(self.dataset_valid.classNames)   
         num_rel_class = len(self.dataset_valid.relationNames)
@@ -63,9 +67,19 @@ class MMGNet():
 #        self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
 #        self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
         
+        
         ''' Build Model '''
-        self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
-        self.teacher = Mmgnet_teacher(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        if self.model_name == 'Mmgnet':
+            self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        elif self.model_name == 'sgfn':
+            self.model = SGFN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        elif self.model_name == 'sgpn':
+            self.model = SGPN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        else:
+            print(f'Unknown model name: {self.model_name}')
+            raise NotImplementedError
+        ''' teacher model '''
+        self.teacher = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
 
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
@@ -113,7 +127,7 @@ class MMGNet():
 
         ########## KD 
         #teacher = self.teacher.load_pretrain_model(torch.load('/home/hojun/git/CVPR2023-VLSAT/checkpoints/3dssg_best_ckpt/mmg_best.pth'))
-        self.teacher.load_pretrain_model("./checkpoints/3dssg_best_ckpt", is_freeze=True)
+        self.teacher.load_pretrain_model("/home/hojun/git/VLSAT_pruning/config/ckp/Mmgnet/vlsat_baseline", is_freeze=True)
         
         self.model.epoch = 1
         keep_training = True
@@ -127,9 +141,6 @@ class MMGNet():
         ''' Resume data loader to the last read location '''
         loader = iter(train_loader)
                    
-        if self.mconfig.use_pretrain != "":
-            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=True)
-        
         for k, p in self.model.named_parameters():
             if p.requires_grad:
                 print(f"Para {k} need grad")
@@ -162,16 +173,16 @@ class MMGNet():
                             if self.config.VERBOSE else [x for x in logs if not x[0].startswith('Loss')])
                 if self.config.LOG_INTERVAL and iteration % self.config.LOG_INTERVAL == 0:
                     self.log(logs, iteration)
-                if self.model.iteration >= self.max_iteration:
-                    break
+                # if self.model.iteration >= self.max_iteration:
+                #     break
 
             progbar = op_utils.Progbar(self.total, width=20, stateful_metrics=['Misc/epo', 'Misc/it'])
             loader = iter(train_loader)
             self.save()
 
-            if ('VALID_INTERVAL' in self.config and self.config.VALID_INTERVAL > 0 and self.model.epoch % self.config.VALID_INTERVAL == 0):
+            if (self.model.epoch > 20 and 'VALID_INTERVAL' in self.config and self.config.VALID_INTERVAL > 0 and self.model.epoch % self.config.VALID_INTERVAL == 0):
                 print('start validation...')
-                rel_acc_val = self.validation()
+                _, _, _, _, _, _, _, _, rel_acc_val = self.validation()
                 self.model.eva_res = rel_acc_val
                 self.save()
             
@@ -198,18 +209,37 @@ class MMGNet():
                     
     def save(self):
         self.model.save ()
+    def calc_FLOPs(self):
+        drop_last = True
+        sample_loader = CustomDataLoader(
+            config = self.config,
+            dataset=self.dataset_valid,
+            batch_size=16,
+            num_workers=0,
+            drop_last=drop_last,
+            shuffle=True,
+            collate_fn=collate_fn_mmg,
+        )
+        #print(self.dataset_train[0][0].unsqueeze(0).shape)
+        loader = iter(sample_loader)
+        item = next(loader)
+        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
+        inputs = (obj_points, obj_2d_feats, edge_indices, descriptor, batch_ids, False)
+        #kwargs = {'descriptor': descriptor, 'batch_ids':batch_ids,'istrain': False}
+        return FlopCountAnalysis(self.model, inputs)
         
     def validation(self, debug_mode = False):
+        
         val_loader = CustomDataLoader(
             config = self.config,
             dataset=self.dataset_valid,
-            batch_size=1,
+            batch_size=16,
             num_workers=self.config.WORKERS,
             drop_last=False,
             shuffle=False,
             collate_fn=collate_fn_mmg
         )
-       
+
         total = len(self.dataset_valid)
         progbar = op_utils.Progbar(total, width=20, stateful_metrics=['Misc/it'])
         
@@ -398,9 +428,9 @@ class MMGNet():
                 ]
         
         self.log(logs, self.model.iteration)
-        return mean_recall[0]
+        #return mean_recall[0]
         #     print(f"Total inference time: {total_inference_time}")
-        # return 0
+        return obj_acc_1, obj_acc_5, obj_acc_10, rel_acc_1, rel_acc_3, rel_acc_5, triplet_acc_50, triplet_acc_100, mean_recall[0]
     
     def compute_mean_predicate(self, cls_matrix_list, topk_pred_list):
         cls_dict = {}

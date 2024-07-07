@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 ROOT_PATH = '/home/knuvki/Desktop/song/VLSAT_pruning/'
 DATA_PATH = '/home/knuvki/Desktop/song/VLSAT_pruning/data/3RScan'
+=======
+ROOT_PATH = '/home/knuvi/Desktop/song/VLSAT_pruning/'
+DATA_PATH = '/home/knuvi/Desktop/song/VLSAT_pruning/data/3RScan'
+>>>>>>> ff93665dff7b47397eceef8605bce6ac924d758a
 # SCANNET_DATA_PATH = '/path/to/scannet' 
 # SCANNET_SPLIT_TRAIN = '/path/to/scannet/Tasks/Benchmarkscannetv2_train.txt'
 # SCANNET_SPLIT_VAL = '/path/to/scannet/Tasks/Benchmark/scannetv2_val.txt'
