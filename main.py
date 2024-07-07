@@ -175,7 +175,7 @@ def load_config():
     config.pruning_part = args.part
     if args.ratio:
         config.pruning_ratio = float(args.ratio)
-    if config.pruning_method:
+    if args.method:
         config.pruning_method = args.method
 
     return config
