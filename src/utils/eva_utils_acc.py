@@ -252,12 +252,12 @@ def read_json(split):
     """
     selected_scans = set()
     if split == 'train' :
-        selected_scans = selected_scans.union(read_txt_to_list('/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset/train_scans.txt'))
-        with open("/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset/relationships_train.json", "r") as read_file:
+        selected_scans = selected_scans.union(read_txt_to_list('/home/knuvi/Desktop/song/VLSAT_pruning/data/3DSSG_subset/train_scans.txt'))
+        with open("/home/knuvi/Desktop/song/VLSAT_pruning/data/3DSSG_subset/relationships_train.json", "r") as read_file:
             data = json.load(read_file)
     elif split == 'val':
-        selected_scans = selected_scans.union(read_txt_to_list('/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset/validation_scans.txt'))
-        with open("/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset/relationships_validation.json", "r") as read_file:
+        selected_scans = selected_scans.union(read_txt_to_list('/home/knuvi/Desktop/song/VLSAT_pruning/data/3DSSG_subset/validation_scans.txt'))
+        with open("/home/knuvi/Desktop/song/VLSAT_pruning/data/3DSSG_subset/relationships_validation.json", "r") as read_file:
             data = json.load(read_file)
     else:
         raise RuntimeError('unknown split type:',split)

@@ -215,6 +215,9 @@ class MMGNet():
         return pruner
 
     def train(self):
+        print('===   start training   ===')
+        
+
         self.start_time = time.time()
         self.init_named()
         ''' create data loader '''
@@ -677,7 +680,6 @@ class MMGNet():
 
             progbar.add(1, values=logs if self.config.VERBOSE else [x for x in logs if not x[0].startswith('Loss')])
 
-
         cls_matrix_list = np.stack(cls_matrix_list)
         sub_scores_list = np.stack(sub_scores_list)
         obj_scores_list = np.stack(obj_scores_list)
@@ -722,12 +724,11 @@ class MMGNet():
         rel_acc_2d_mean_1, rel_acc_2d_mean_3, rel_acc_2d_mean_5 = self.compute_mean_predicate(cls_matrix_list, topk_rel_2d_list)
         
         ## save results
+        print("\n---  Print Evaluation Results  ---")
         print(f"Experiment: {self.exp}", file=f_in)
         print(f"Model : {self.model_name}")
-        if self.config.pruning_ratio:
-            print(f"Pruning part: {self.config.pruning_ratio}", file=f_in)
-            print(f"Pruning ratio: {self.config.pruning_ratio}", file=f_in)
-        
+        print(f"Pruning part: {self.config.pruning_part}", file=f_in)
+        print(f"Pruning ratio: {self.pruning_ratio}", file=f_in)
         print(f"Eval: 3d obj Acc@1  : {obj_acc_1}", file=f_in)   
         #print(f"Eval: 2d obj Acc@1: {obj_acc_2d_1}", file=f_in)
         print(f"Eval: 3d obj Acc@5  : {obj_acc_5}", file=f_in) 
@@ -761,21 +762,21 @@ class MMGNet():
         print(f"Eval: 3d all-zero-shot recall@50 : {all_zero_shot_recall[0]}", file=f_in)
         print(f"Eval: 3d all-zero-shot recall@100: {all_zero_shot_recall[1]}", file=f_in)
         
-        ## calculate flops
-        flops = self.model.calc_FLOPs().total()
-        flops = flops / 1e9
-        print(f'\nTotal Flops: {flops:.4f} billion FLOPs', file=f_in)
-        
-        # calculate total parameters
-        param = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-        print(f'Total Parameters: {param:,}', file=f_in)
-
-        # total time
-        print(f'Total Training Time: {self.end_time - self.start_time:.2f} sec', file=f_in)
-
-
         if self.model.config.EVAL:
+            ## calculate flops
+            flops = self.calc_FLOPs().total()
+            flops = flops / 1e9
+            print(f'\nTotal Flops: {flops:.4f} billion FLOPs', file=f_in)
+            
+            # calculate total parameters
+            param = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+            print(f'Total Parameters: {param:,}', file=f_in)
+
+            # total time
+            print(f'Total Training Time: {self.end_time - self.start_time:.2f} sec', file=f_in)
             f_in.close()
+            print("===   Evaluation done!  ===")
+            
         
         logs = [("Acc@1/obj_cls_acc", obj_acc_1),
                 ("Acc@1/obj_2d_cls_acc", obj_acc_2d_1),
