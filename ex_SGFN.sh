@@ -20,5 +20,7 @@ run_command() {
 # run_command prune pre_st25_gcn_sgfn gcn sgfn ./config/mmgnet.json 0.25 st
 # run_command prune pre_st50_gcn_sgfn gcn sgfn ./config/mmgnet.json 0.5 st
 # run_command prune pre_st75_gcn_sgfn gcn sgfn ./config/mmgnet.json 0.75 st
+
 run_command train val_block1_gcn_sgfn gcn sgfn ./config/mmgnet.json 0 st
 
+#run_command prune pre_st75_gcn_sgfn gcn sgfn ./config/mmgnet.json 0.75 st

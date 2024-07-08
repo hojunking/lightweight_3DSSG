@@ -16,3 +16,6 @@ config/*.txt
 #src/utils/eva_utils_acc.py
 #utils/define.py
 #data/pointcloud2image.py
+utils/define.py
+src/utils/eva_utils_acc.py
+config/mmgnet.json
