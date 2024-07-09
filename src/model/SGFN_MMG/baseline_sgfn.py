@@ -57,10 +57,11 @@ class SGFN(BaseModel):
             feature_transform=mconfig.feature_transform,
             out_size=mconfig.edge_feature_size)
         
-        self.gcn = GraphEdgeAttenNetworkLayers(512,
-                            256,
+        self.gcn = GraphEdgeAttenNetworkLayers(
+                            self.mconfig.point_feature_size,
+                            self.mconfig.edge_feature_size,
                             self.mconfig.DIM_ATTEN,
-                            self.mconfig.N_LAYERS, 
+                            self.mconfig.N_LAYERS,
                             self.mconfig.NUM_HEADS,
                             self.mconfig.GCN_AGGR,
                             flow=self.flow,

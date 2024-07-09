@@ -20,6 +20,8 @@ class TripletEdgeNet(torch.nn.Module):
         self.dim_node=dim_node
         self.dim_edge=dim_edge
         self.nn = build_mlp([dim_node*2+dim_edge,2*(dim_node+dim_edge),dim_edge],
+        #self.nn = build_mlp([dim_node*2+dim_edge,dim_edge],
+        
                           do_bn= use_bn, on_last=False)
     def forward(self, x_i, edge_feature,x_j):
         x_ = torch.cat([x_i,edge_feature,x_j],dim=1)#.view(b, -1, 1)
@@ -61,7 +63,9 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
         self.d_o = d_o = dim_atten // num_heads
         self.num_heads = num_heads
         self.use_edge = use_edge
-        self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        #self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        
+        self.nn_edge = build_mlp([dim_node*2+dim_edge,dim_edge],
                           do_bn= use_bn, on_last=False)
         
         DROP_OUT_ATTEN = None
@@ -142,6 +146,8 @@ class GraphEdgeAttenNetwork(BaseNetwork):
                 dim_node=dim_node,dim_edge=dim_edge,dim_atten=dim_atten,
                 num_heads=num_heads,use_bn=use_bn,attention=attention,use_edge=use_edge, **kwargs)
             self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
+            #self.prop = build_mlp([dim_node+dim_atten, dim_node],
+            
                              do_bn= use_bn, on_last=False)
         else:
             raise NotImplementedError('')

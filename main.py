@@ -47,7 +47,7 @@ def main():
         exit()
     
     if config.MODE == 'prune':
-        print('start pruning...')
+        print('===   Start Pruning   ===')
         print("Pruning method: ", config.pruning_method)
         
         """ Structured pruning"""
@@ -95,10 +95,9 @@ def main():
         else :
             print("Error: Unknown pruning method specified.")
             exit()
+        print('\n===  Pruning Done   ===\n')
         
 
-        ## After pruning, we need to retrain the model
-        print('\n=========After pruning start training==========\n')
         model.train()
         
         ## After retraining, we need to validate the model
@@ -112,20 +111,14 @@ def main():
     except:
         print('unable to load previous model.')
     
-    print('\nstart training...\n')
-    print('total_params:', count_parameters(model.model))
-    flops = model.calc_FLOPs().total()
-    flops = flops / 1e9
-    print(f'total_flops: {flops:.4f} billion FLOPs')
+    ## WITHOUT PRUNING
     model.train()
-
     # we test the best model in the end
     model.config.EVAL = True
     print('start validation...')
     model.load()
     model.validation()
     #flops = flops / 1e9
-    print(f'total_flops: {flops:.4f} billion FLOPs')
 
 def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -135,8 +128,6 @@ def load_config():
     r"""loads model config
 
     """
-
-
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--config', type=str, default='config_example.json', help='configuration file name. Relative path under given path (default: config.yml)')
     parser.add_argument('--loadbest', type=int, default=0,choices=[0,1], help='1: load best model or 0: load checkpoints. Only works in non training mode.')
