@@ -531,7 +531,7 @@ class MMGNet():
         elif apply_part == "gnn":
             print("gnn pruning start")
             
-            if self.model_name == 'sgfn' or 'sgpn':
+            if self.model_name == 'sgfn' or self.model_name == 'sgpn':
                 gnn_name = 'gcn'
             else:
                 gnn_name = 'mmg'

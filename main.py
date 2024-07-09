@@ -22,7 +22,13 @@ def main():
     if config.VERBOSE:
         print(config)
     
+    if config.MODEL.use_pretrain:
+        if os.path.exists(config.MODEL.use_pretrain):
+            print(f'===   load pretrain model: {config.MODEL.use_pretrain}   ===')
+        else:
+            raise FileNotFoundError(f"The folder '{config.MODEL.use_pretrain}' does not exist.")
     model = MMGNet(config)
+
 
     save_path = os.path.join(config.PATH,'config', model.model_name, model.exp)
     os.makedirs(save_path, exist_ok=True)
@@ -137,6 +143,7 @@ def load_config():
     parser.add_argument('--part', type=str)
     parser.add_argument('--model', type=str)
     parser.add_argument('--ratio', type=str)
+    parser.add_argument('--pretrained', type=str)
 
 
     args = parser.parse_args()
@@ -164,6 +171,7 @@ def load_config():
     config.NAME = args.model
     config.exp = args.exp
     config.pruning_part = args.part
+    config.MODEL.use_pretrain = args.pretrained
     if args.ratio:
         config.pruning_ratio = float(args.ratio)
     if args.method:

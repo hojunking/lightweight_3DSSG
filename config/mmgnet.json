@@ -43,7 +43,7 @@
     "multi_rel_outputs": true,
     "feature_transform": false,
     "point_feature_size": 512,
-    "edge_feature_size":256,
+    "edge_feature_size":512,
     "clip_feat_dim": 512, 
     "lambda_o": 0.1,
     "DIM_ATTEN": 256,
