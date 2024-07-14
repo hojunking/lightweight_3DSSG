@@ -25,6 +25,8 @@ def main():
     if config.MODEL.use_pretrain:
         if os.path.exists(config.MODEL.use_pretrain):
             print(f'===   load pretrain model: {config.MODEL.use_pretrain}   ===')
+        elif config.MODEL.use_pretrain =='x':
+            print('===   No pretrained weight start   ===')
         else:
             raise FileNotFoundError(f"The folder '{config.MODEL.use_pretrain}' does not exist.")
     model = MMGNet(config)

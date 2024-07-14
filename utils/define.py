@@ -1,5 +1,5 @@
-ROOT_PATH = '/home/oi/Desktop/song/lightweight_3DSSG/'
-DATA_PATH = '/home/oi/Desktop/song/lightweight_3DSSG/data/3RScan'
+ROOT_PATH = '/home/knuvi/Desktop/song/lightweight_3DSSG/'
+DATA_PATH = '/home/knuvi/Desktop/song/lightweight_3DSSG/data/3RScan'
 # SCANNET_DATA_PATH = '/path/to/scannet' 
 # SCANNET_SPLIT_TRAIN = '/path/to/scannet/Tasks/Benchmarkscannetv2_train.txt'
 # SCANNET_SPLIT_VAL = '/path/to/scannet/Tasks/Benchmark/scannetv2_val.txt'

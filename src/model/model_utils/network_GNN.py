@@ -267,9 +267,9 @@ class GraphEdgeAttenNetworkLayers(torch.nn.Module):
 
         for i in range(self.num_layers):
             
-            node_feature = node_feature.unsqueeze(0)
-            node_feature = self.self_attn[i](node_feature, node_feature, node_feature, attention_weights=distance, way=attention_matrix_way, attention_mask=mask)
-            node_feature = node_feature.squeeze(0)
+            # node_feature = node_feature.unsqueeze(0)
+            # node_feature = self.self_attn[i](node_feature, node_feature, node_feature, attention_weights=distance, way=attention_matrix_way, attention_mask=mask)
+            # node_feature = node_feature.squeeze(0)
             
             gconv = self.gconvs[i]
             node_feature, edge_feature, prob = gconv(node_feature, edge_feature, edges_indices)
