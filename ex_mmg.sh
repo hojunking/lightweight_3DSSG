@@ -19,14 +19,16 @@ run_command() {
 #run_command prune origin_t3 gcn Mmgnet ./config/mmgnet.json 0.3
 
 #run_command train test gcn Mmgnet ./config/mmgnet.json 0 unst
-run_command prune test gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu25
+#run_command prune test gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu25
 
-#run_command prune param25_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu25
-#run_command prune param25_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param25_unst75_gcn_mmg
+# run_command prune param25_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu25
+# run_command prune param25_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param25_unst75_gcn_mmg
 
-# run_command prune param50_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
-# run_command prune param50_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param25_unst75_gcn_mmg
+#run_command prune param50_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
+#run_command prune param50_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_unst75_gcn_mmg
 
-# run_command prune param75_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu75
-# run_command prune param75_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param25_unst75_gcn_mmg
+run_command prune test gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
+
+#run_command prune param75_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu75
+#run_command prune param75_unst75_st25_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.05 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param75_unst75_gcn_mmg
 ## method : st, unst

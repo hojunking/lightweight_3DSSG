@@ -45,8 +45,12 @@ class MMGNet():
         self.prune_delta_reg = config.pruning_pointnet.delta_reg
         self.prune_weight_decay = config.pruning_pointnet.weight_decay
         self.prune_global_pruning = config.pruning_pointnet.global_pruning
-        self.prune_sl_lr_decay_milestones = config.pruning_pointnet.sl_lr_decay_milestones 
-
+        self.prune_sl_lr_decay_milestones = config.pruning_pointnet.sl_lr_decay_milestones
+        
+        # real pruning ratio
+        self.encoder_pruned_ratio = 0
+        self.gnn_pruned_ratio = 0
+        self.classifier_pruned_ratio = 0
         ''' Build dataset '''
         dataset = None
         if config.MODE  == 'train' or config.MODE == 'prune':
@@ -112,20 +116,6 @@ class MMGNet():
         
     def load(self, best=False):
         return self.model.load(best)
-    
-    
-    def init_named(self):
-        # 디렉토리 경로 설정
-        root_dir = os.path.join(self.config.PATH, 'ckp', self.model_name, self.exp)
-
-        # _best.pth 파일들의 목록을 가져오기
-        best_files = glob.glob(os.path.join(root_dir, '*_best.pth'))
-        print(best_files)
-        for file_path in best_files:
-            # 새 파일 이름 생성
-            new_file_path = file_path.replace('_best.pth', '_pre.pth')
-            # 파일 이름 변경
-            os.rename(file_path, new_file_path)
 
 
     @torch.no_grad()
@@ -193,9 +183,9 @@ class MMGNet():
 
         # ignore output layers
         for m in model.modules():
-            if isinstance(m, torch.nn.Linear) and m.out_features == num_classes:
+            if isinstance(m, torch.nn.Linear) and m.out_features in num_classes:
                 ignored_layers.append(m)
-            elif isinstance(m, torch.nn.modules.conv._ConvNd) and m.out_channels == num_classes:
+            elif isinstance(m, torch.nn.modules.conv._ConvNd) and m.out_channels in num_classes:
                 ignored_layers.append(m)
         
         # Here we fix iterative_steps=200 to prune the model progressively with small steps 
@@ -219,7 +209,6 @@ class MMGNet():
         
 
         self.start_time = time.time()
-        self.init_named()
         ''' create data loader '''
         drop_last = True
         train_loader = CustomDataLoader(
@@ -375,6 +364,7 @@ class MMGNet():
         else:
             raise NotImplementedError
         print(f'en_current_speed_up: {current_speed_up}, pruned_ratio: {pruned_ratio}\n')
+        return pruned_ratio
 
     def encoder_pruning(self, debug_mode = False):
         
@@ -392,8 +382,7 @@ class MMGNet():
         encoder_base_ops, encoder_origin_params_count = tp.utils.count_ops_and_params(self.model.obj_encoder, example_inputs=obj_encoder_input_example)
         
         # start pruning
-        self.go_prune(prun_type,"obj_encoder",obj_encoder_pruner, obj_encoder_input_example, encoder_base_ops, encoder_origin_params_count)
-        
+        self.encoder_pruned_ratio = self.go_prune(prun_type,"obj_encoder",obj_encoder_pruner, obj_encoder_input_example, encoder_base_ops, encoder_origin_params_count)
         ''' rel_encoder 2d/3d pruning'''
         # rel_encoder_2d_example = torch.randn(1070, 11, 1).to(self.config.DEVICE)
         # rel_encoder_3d_example = torch.randn(1070, 11, 1).to(self.config.DEVICE)
@@ -423,8 +412,8 @@ class MMGNet():
                 gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
-                self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[512], ignored_layers=ignore_layers)
+                self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
         elif self.model_name == 'sgpn':
             num_nodes, num_edges = 136, 1048
@@ -444,8 +433,8 @@ class MMGNet():
                 gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=1, ignored_layers=ignore_layers)
-                self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[1], ignored_layers=ignore_layers)
+                self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
         ## vl-sat mmg pruning
         else:
@@ -462,7 +451,7 @@ class MMGNet():
                 gcn_2ds_base_ops, gcn_2ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_2d[{idx}]_base_ops: {gcn_2ds_base_ops}, gcn_2d[{idx}]_origin_params_count: {gcn_2ds_origin_params_count}')
-                gcn_2ds_pruner = self.get_pruner(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
+                gcn_2ds_pruner = self.get_pruner(self.model.mmg.gcn_2ds[idx], example_inputs=gcn_example_input, num_classes=[512], ignored_layers=ignore_layers)
                 self.go_prune(prun_type, "gcn_2ds",gcn_2ds_pruner, gcn_example_input, gcn_2ds_base_ops, gcn_2ds_origin_params_count, idx)
 
             # gcn_3d[depth] pruning
@@ -471,29 +460,29 @@ class MMGNet():
                 gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-                gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=512, ignored_layers=ignore_layers)
-                self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
+                gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=[512], ignored_layers=ignore_layers)
+                self.gnn_pruned_ratio = self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
     
         
     def classifier_pruning(self, debug_mode = False):
         print(f'===  {self.model_name} (classifier) Pruning   ===')
         prun_type = "pointnet"
         
-        if self.model_name == 'sgfn' or 'sgpn':
+        if self.model_name == 'sgfn' or self.model_name == 'sgpn':
             # random input example
             obj_pred_input_example = torch.randn(130, 512).to(self.config.DEVICE)
             rel_pred_input_example = torch.randn(964, 256).to(self.config.DEVICE)
 
             # get pruner 
-            obj_pred_pruner = self.get_pruner(self.model.obj_predictor, example_inputs=obj_pred_input_example, num_classes=160, ignored_layers=[])
-            rel_pred_pruner = self.get_pruner(self.model.rel_predictor, example_inputs=rel_pred_input_example, num_classes=26, ignored_layers=[])
+            obj_pred_pruner = self.get_pruner(self.model.obj_predictor, example_inputs=obj_pred_input_example, num_classes=[160], ignored_layers=[])
+            rel_pred_pruner = self.get_pruner(self.model.rel_predictor, example_inputs=rel_pred_input_example, num_classes=[26], ignored_layers=[])
             
             # get base ops and origin params count
             obj_pred_base_ops, obj_pred_origin_params_count = tp.utils.count_ops_and_params(self.model.obj_predictor, example_inputs=obj_pred_input_example)
             rel_pred_base_ops, rel_pred_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor, example_inputs=rel_pred_input_example)
             
             # start pruning
-            self.go_prune(prun_type,"obj_predictor",obj_pred_pruner, obj_pred_input_example, obj_pred_base_ops, obj_pred_origin_params_count)
+            self.classifier_pruned_ratio =self.go_prune(prun_type,"obj_predictor",obj_pred_pruner, obj_pred_input_example, obj_pred_base_ops, obj_pred_origin_params_count)
             self.go_prune(prun_type,"rel_predictor",rel_pred_pruner, rel_pred_input_example, rel_pred_base_ops, rel_pred_origin_params_count)
         ## VL-SAT classifier
         else:
@@ -502,15 +491,15 @@ class MMGNet():
             rel_pred_2d_input_example = torch.randn(1070, 512).to(self.config.DEVICE)
 
             # get pruner 
-            rel_pred_3d_pruner = self.get_pruner(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example, num_classes=26, ignored_layers=[])
-            rel_pred_2d_pruner = self.get_pruner(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example, num_classes=26, ignored_layers=[])
+            rel_pred_3d_pruner = self.get_pruner(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example, num_classes=[26], ignored_layers=[])
+            rel_pred_2d_pruner = self.get_pruner(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example, num_classes=[26], ignored_layers=[])
             
             # get base ops and origin params count
             rel_pred_3d_base_ops, rel_pred_3d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_3d, example_inputs=rel_pred_3d_input_example)
             rel_pred_2d_base_ops, rel_pred_2d_origin_params_count = tp.utils.count_ops_and_params(self.model.rel_predictor_2d, example_inputs=rel_pred_2d_input_example)
             
             # start pruning
-            self.go_prune(prun_type,"rel_predictor_3d",rel_pred_3d_pruner, rel_pred_3d_input_example, rel_pred_3d_base_ops, rel_pred_3d_origin_params_count)
+            self.classifier_pruned_ratio = self.go_prune(prun_type,"rel_predictor_3d",rel_pred_3d_pruner, rel_pred_3d_input_example, rel_pred_3d_base_ops, rel_pred_3d_origin_params_count)
             self.go_prune(prun_type,"rel_predictor_2d",rel_pred_2d_pruner, rel_pred_2d_input_example, rel_pred_2d_base_ops, rel_pred_2d_origin_params_count)
     
     
@@ -728,7 +717,16 @@ class MMGNet():
         print(f"Experiment: {self.exp}", file=f_in)
         print(f"Model : {self.model_name}")
         print(f"Parameter reduction part: {self.config.pruning_part}", file=f_in)
-        print(f"Pruning ratio: {self.pruning_ratio}", file=f_in)
+        
+        print(f"Pruning ratio setting: {self.pruning_ratio}", file=f_in)
+        if self.encoder_pruned_ratio:
+            print(f"Encoder Pruning ratio: {self.encoder_pruned_ratio}", file=f_in)
+        if self.gnn_pruned_ratio:
+            print(f"GNN Pruning ratio: {self.gnn_pruned_ratio}", file=f_in)
+        if self.classifier_pruned_ratio:    
+            print(f"Classifier Pruning ratio: {self.classifier_pruned_ratio}", file=f_in)
+            
+        
         print(f"Eval: 3d obj Acc@1  : {obj_acc_1}", file=f_in)   
         #print(f"Eval: 2d obj Acc@1: {obj_acc_2d_1}", file=f_in)
         print(f"Eval: 3d obj Acc@5  : {obj_acc_5}", file=f_in) 
