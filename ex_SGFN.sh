@@ -6,10 +6,21 @@ run_command() {
 # Call the function with different sets of arguments
 
 # Run 1
-#run_command prune param25_unst75_gcn_sgfn gcn sgfn ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/param_reduction25_gcn_sgfn
+#run_command prune st_enco_prune50 encoder sgfn ./config/mmgnet.json
 
+# Run 2
+#run_command prune st_gcn_prune50 gcn sgfn ./config/mmgnet.json
 
-run_command train param50_gcn_real_sgfn gcn sgfn ./config/mmgnet.json 0 unst x
+# Run 3
+#run_command prune st_classif_prune50 classifier sgfn ./config/mmgnet.json
+
+# Run 4
+#run_command prune st_all_prune50 all sgfn ./config/mmgnet.json
+
+run_command train param50_real_real_sgfn_baseline gcn sgfn ./config/SGFN.json 0 unst x
+# run_command prune real_st25_gcn_sgfn gcn sgfn ./config/SGFN.json 0.25 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/real_sgfn_baseline
+# run_command prune real_st50_gcn_sgfn gcn sgfn ./config/SGFN.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/real_sgfn_baseline
+# run_command prune real_st75_gcn_sgfn gcn sgfn ./config/SGFN.json 0.75 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/real_sgfn_baseline
 
 #run_command train param_reduction75_gcn_sgfn gcn sgfn ./config/mmgnet.json 0 st
 #run_command train param_reduction25_gcn_sgfn gcn sgfn ./config/mmgnet.json 0 st

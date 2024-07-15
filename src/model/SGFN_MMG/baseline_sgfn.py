@@ -33,8 +33,8 @@ class SGFN(BaseModel):
         self.num_rel=num_rel_class
         self.flow = 'target_to_source'
         self.clip_feat_dim = self.config.MODEL.clip_feat_dim
-
-        dim_point_feature = 512
+        ## point feature size 512 -> 256
+        dim_point_feature = 256 # 512
         
         if self.mconfig.USE_SPATIAL:
             dim_point_feature -= dim_f_spatial-3 # ignore centroid
@@ -69,8 +69,9 @@ class SGFN(BaseModel):
                             use_edge=self.mconfig.USE_GCN_EDGE,
                             DROP_OUT_ATTEN=self.mconfig.DROP_OUT_ATTEN)
 
-
-        self.obj_predictor = PointNetCls(num_obj_class, in_size=512,
+        ## point feature size 512 -> 256
+        self.obj_predictor = PointNetCls(num_obj_class, in_size=256,
+        # self.obj_predictor = PointNetCls(num_obj_class, in_size=512,
                                  batch_norm=with_bn, drop_out=True)
 
         if mconfig.multi_rel_outputs:
