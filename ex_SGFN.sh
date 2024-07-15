@@ -6,7 +6,7 @@ run_command() {
 # Call the function with different sets of arguments
 
 
-run_command prune st50_unst75_gcn_attn_sgfn gcn ./config/SGFN.json 0.5 0.75 /home/knuvi/Desktop/song/VLSAT_pruning/config/ckp/SGFN/SGFN_baseline
+run_command train real_real_real_sgfn_baseline gcn ./config/SGFN.json 0 0 x
 # run_command prune real_st25_gcn_sgfn gcn sgfn ./config/SGFN.json 0.25 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/real_sgfn_baseline
 # run_command prune real_st50_gcn_sgfn gcn sgfn ./config/SGFN.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/real_sgfn_baseline
 # run_command prune real_st75_gcn_sgfn gcn sgfn ./config/SGFN.json 0.75 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/SGFN/real_sgfn_baseline
