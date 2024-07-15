@@ -47,7 +47,7 @@ class SGPN(BaseModel):
         self.flow = 'target_to_source'
         self.clip_feat_dim = self.config.MODEL.clip_feat_dim
 
-        dim_point_feature = 512
+        dim_point_feature = 256
 
         # Object Encoder
         self.obj_encoder = PointNetfeat(
@@ -74,7 +74,7 @@ class SGPN(BaseModel):
             dim_hidden=mconfig.point_feature_size,
             use_bn=with_bn)
         
-        self.obj_predictor = PointNetCls(num_obj_class, in_size=512,
+        self.obj_predictor = PointNetCls(num_obj_class, in_size=256,
                                  batch_norm=with_bn, drop_out=True)
 
         if mconfig.multi_rel_outputs:
