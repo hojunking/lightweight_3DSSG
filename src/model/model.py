@@ -371,7 +371,7 @@ class MMGNet():
     def encoder_pruning(self, debug_mode = False):
         
             
-        print(f'===  {self.model_name} (encoder) Pruning   ===')
+        print(f'===  {self.model_name} (encoder) Structured Pruning   ===')
         prun_type = "pointnet"
         ''' obj_encoder pruning'''
         # random input example
@@ -395,7 +395,7 @@ class MMGNet():
         # self.go_prune(prun_type, "rel_encoder_2d",rel_encoder_2d_prunner, rel_encoder_2d_example, rel_encoder_2d_base_ops, rel_encoder_2d_origin_params_count)
         # self.go_prune(prun_type, "rel_encoder_3d",rel_encoder_3d_prunner, rel_encoder_3d_example, rel_encoder_3d_base_ops, rel_encoder_3d_origin_params_count)
     def gcn_pruning(self, debug_mode = False):
-        print(f'=== {self.model_name} (GCN) Pruning   ===')
+        print(f'=== {self.model_name} (GCN) Structured Pruning   ===')
         prun_type = "gcn"
         
         if self.model_name == 'sgfn':
@@ -467,7 +467,7 @@ class MMGNet():
     
         
     def classifier_pruning(self, debug_mode = False):
-        print(f'===  {self.model_name} (classifier) Pruning   ===')
+        print(f'===  {self.model_name} (classifier) Structured Pruning   ===')
         prun_type = "pointnet"
         
         if self.model_name == 'sgfn' or self.model_name == 'sgpn':
@@ -532,7 +532,7 @@ class MMGNet():
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')
-                    
+
         elif apply_part == "classifier":
             classifiers = ['obj_predictor_3d', 'rel_predictor_3d', 'obj_predictor_2d', 'rel_predictor_2d']
             for predicator in classifiers:
