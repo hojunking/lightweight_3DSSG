@@ -22,15 +22,7 @@ def main():
     if config.VERBOSE:
         print(config)
     
-    if config.MODEL.use_pretrain:
-        if os.path.exists(config.MODEL.use_pretrain):
-            print(f'===   load pretrain model: {config.MODEL.use_pretrain}   ===')
-        elif config.MODEL.use_pretrain =='x':
-            print('===   No pretrained weight start   ===')
-        else:
-            raise FileNotFoundError(f"The folder '{config.MODEL.use_pretrain}' does not exist.")
     model = MMGNet(config)
-
 
     save_path = os.path.join(config.PATH,'config', model.model_name, model.exp)
     os.makedirs(save_path, exist_ok=True)
@@ -100,6 +92,31 @@ def main():
                 exit()
             pruning_result = config.exp +'.txt'
             model.calculate_sparsity(pruning_result)
+        
+        elif config.pruning_method == 'unst_st':
+            """ Unstructured + Structured pruning"""
+            print("Pruning method: Unstructured + Structured pruning")
+            if config.pruning_part == 'encoder':
+                model.apply_pruning("encoder")
+                model.encoder_pruning()
+            elif config.pruning_part == 'gcn':
+                model.apply_pruning("gnn")
+                model.gcn_pruning()
+            elif config.pruning_part == 'classifier':
+                model.apply_pruning("classifier")
+                model.classifier_pruning()
+            elif config.pruning_part == 'all':
+                model.apply_pruning("encoder")
+                model.apply_pruning("gnn")
+                model.apply_pruning("classifier")
+                model.encoder_pruning()
+                model.gcn_pruning()
+                model.classifier_pruning()
+            else:
+                print("Error: Unknown model part specified.")
+                exit()
+            pruning_result = config.exp +'.txt'
+            model.calculate_sparsity(pruning_result)
         else :
             print("Error: Unknown pruning method specified.")
             exit()
@@ -141,18 +158,14 @@ def load_config():
     parser.add_argument('--loadbest', type=int, default=0,choices=[0,1], help='1: load best model or 0: load checkpoints. Only works in non training mode.')
     parser.add_argument('--mode', type=str, choices=['train','trace','eval','prune'], help='mode. can be [train,trace,eval]',required=True)
     parser.add_argument('--exp', type=str)
-    parser.add_argument('--method', type=str)
     parser.add_argument('--part', type=str)
-    parser.add_argument('--model', type=str)
-    parser.add_argument('--ratio', type=str)
+    parser.add_argument('--st_ratio', type=str)
+    parser.add_argument('--unst_ratio', type=str)
     parser.add_argument('--pretrained', type=str)
 
 
     args = parser.parse_args()
     config_path = os.path.abspath(args.config)
-
-    if args.mode == 'prune' and not args.ratio:
-        parser.error("--ratio is required when --mode is 'prune'")
 
     if not os.path.exists(config_path):
         raise RuntimeError('Targer config file does not exist. {}' & config_path)
@@ -170,14 +183,31 @@ def load_config():
             config['NAME'] = name            
     config.LOADBEST = args.loadbest
     config.MODE = args.mode
-    config.NAME = args.model
     config.exp = args.exp
     config.pruning_part = args.part
-    config.MODEL.use_pretrain = args.pretrained
-    if args.ratio:
-        config.pruning_ratio = float(args.ratio)
-    if args.method:
-        config.pruning_method = args.method
+    
+
+    if args.pretrained:
+        if os.path.exists(args.pretrained):
+            print(f'===   load pretrain model: {args.pretrained}   ===')
+            config.MODEL.use_pretrain = args.pretrained
+        elif args.pretrained =='x':
+            print('===   No pretrained weight start   ===')
+        else:
+            raise FileNotFoundError(f"The folder '{args.pretrained}' does not exist.")
+        
+    if args.st_ratio and args.unst_ratio:
+        config.pruning.st_pruning_ratio = float(args.st_ratio)
+        config.pruning.unst_pruning_ratio = float(args.unst_ratio)
+        config.pruning_method = "unst_st"
+    elif args.st_ratio:
+        config.pruning.st_pruning_ratio = float(args.st_ratio)
+        config.pruning_method = "st"
+    elif args.unst_ratio:
+        config.pruning.unst_pruning_ratio = float(args.unst_ratio)
+        config.pruning_method = "unst"
+    else:
+        config.pruning.st_pruning_ratio, config.pruning.unst_pruning_ratio = 0, 0
 
     return config
 

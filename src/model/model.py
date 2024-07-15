@@ -35,17 +35,19 @@ class MMGNet():
         self.update_2d = config.update_2d
         self.masks = {}
         self.start_time, self.end_time = 0, 0
-        ''' Pruning_pointnet config '''
-        self.prune_method = config.pruning_pointnet.method
-        self.prune_speed_up = config.pruning_pointnet.speed_up
-        self.prune_max_pruning_ratio = config.pruning_pointnet.max_pruning_ratio
-        self.pruning_ratio = config.pruning_ratio
-        self.prune_soft_keeping_ratio = config.pruning_pointnet.soft_keeping_ratio
-        self.prune_reg = config.pruning_pointnet.reg
-        self.prune_delta_reg = config.pruning_pointnet.delta_reg
-        self.prune_weight_decay = config.pruning_pointnet.weight_decay
-        self.prune_global_pruning = config.pruning_pointnet.global_pruning
-        self.prune_sl_lr_decay_milestones = config.pruning_pointnet.sl_lr_decay_milestones
+        self.st_pruning_ratio = config.pruning.st_pruning_ratio
+        self.unst_pruning_ratio = config.pruning.unst_pruning_ratio
+
+        ''' pruning config '''
+        self.prune_method = config.pruning.method
+        self.prune_speed_up = config.pruning.speed_up
+        self.prune_max_pruning_ratio = config.pruning.max_pruning_ratio
+        self.prune_soft_keeping_ratio = config.pruning.soft_keeping_ratio
+        self.prune_reg = config.pruning.reg
+        self.prune_delta_reg = config.pruning.delta_reg
+        self.prune_weight_decay = config.pruning.weight_decay
+        self.prune_global_pruning = config.pruning.global_pruning
+        self.prune_sl_lr_decay_milestones = config.pruning.sl_lr_decay_milestones
         
         # real pruning ratio
         self.encoder_pruned_ratio = 0
@@ -135,7 +137,7 @@ class MMGNet():
         return obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids
 
     def get_pruner(self, model, example_inputs, num_classes, ignored_layers=[]):
-        self.config.pruning_pointnet.sparsity_learning = False
+        self.config.pruning.sparsity_learning = False
         if self.prune_method == "random":
             imp = tp.importance.RandomImportance()
             pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
@@ -155,22 +157,22 @@ class MMGNet():
             imp = tp.importance.LAMPImportance(p=2)
             pruner_entry = partial(tp.pruner.MagnitudePruner, global_pruning=self.prune_global_pruning)
         elif self.prune_method == "slim":
-            self.config.pruning_pointnet.sparsity_learning = True
+            self.config.pruning.sparsity_learning = True
             imp = tp.importance.BNScaleImportance()
             pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.prune_reg, global_pruning=self.prune_global_pruning)
         elif self.prune_method == "group_slim":
-            self.config.pruning_pointnet.sparsity_learning = True
+            self.config.pruning.sparsity_learning = True
             imp = tp.importance.BNScaleImportance()
             pruner_entry = partial(tp.pruner.BNScalePruner, reg=self.prune_reg, global_pruning=self.prune_global_pruning, group_lasso=True)
         elif self.prune_method == "group_norm":
             imp = tp.importance.GroupNormImportance(p=2)
             pruner_entry = partial(tp.pruner.GroupNormPruner, global_pruning=self.prune_global_pruning)
         elif self.prune_method == "group_sl":
-            self.config.pruning_pointnet.sparsity_learning = True
+            self.config.pruning.sparsity_learning = True
             imp = tp.importance.GroupNormImportance(p=2, normalizer='max') # normalized by the maximum score for CIFAR
             pruner_entry = partial(tp.pruner.GroupNormPruner, reg=self.prune_reg, global_pruning=self.prune_global_pruning)
         elif self.prune_method == "growing_reg":
-            self.config.pruning_pointnet.sparsity_learning = True
+            self.config.pruning.sparsity_learning = True
             imp = tp.importance.GroupNormImportance(p=2)
             pruner_entry = partial(tp.pruner.GrowingRegPruner, reg=self.prune_reg, delta_reg=self.prune_delta_reg, global_pruning=self.config.global_pruning)
         else:
@@ -195,10 +197,10 @@ class MMGNet():
             model,
             example_inputs,
             importance=imp,
-            iterative_steps=self.config.pruning_pointnet.iterative_steps,
+            iterative_steps=self.config.pruning.iterative_steps,
             pruning_ratio=1.0,
             pruning_ratio_dict=pruning_ratio_dict,
-            max_pruning_ratio=self.config.pruning_pointnet.max_pruning_ratio,
+            max_pruning_ratio=self.config.pruning.max_pruning_ratio,
             ignored_layers=ignored_layers,
             unwrapped_parameters=unwrapped_parameters,
         )
@@ -328,7 +330,7 @@ class MMGNet():
         pruned_ratio = 0
         if prun_type == "pointnet":
             print('prune pointnet', model_name)
-            while pruned_ratio < self.pruning_ratio:
+            while pruned_ratio < self.st_pruning_ratio:
                 
                 pruner.step()
                 pruned_ops, params_count = tp.utils.count_ops_and_params(getattr(self.model, model_name), example_inputs=example_inputs)
@@ -341,7 +343,7 @@ class MMGNet():
         elif prun_type == "gcn":
             print(f'prune :{model_name}[{idx}]')
             if self.model_name in ['sgfn', 'sgpn']:
-                while pruned_ratio < self.pruning_ratio:
+                while pruned_ratio < self.st_pruning_ratio:
                     
                     pruner.step()
                     pruned_ops, params_count = tp.utils.count_ops_and_params(getattr(self.model.gcn, model_name)[idx], example_inputs=example_inputs)
@@ -352,7 +354,7 @@ class MMGNet():
                         break
             else:
                 
-                while pruned_ratio < self.pruning_ratio:
+                while pruned_ratio < self.st_pruning_ratio:
                 
                     pruner.step()
                     pruned_ops, params_count = tp.utils.count_ops_and_params(getattr(self.model.mmg, model_name)[idx], example_inputs=example_inputs)
@@ -511,50 +513,49 @@ class MMGNet():
             else:
                 encoders = ['obj_encoder', 'rel_encoder_2d', 'rel_encoder_3d']
             for encoder_name in encoders:
-                print(f"encoder: {encoder_name} pruning:{self.pruning_ratio} start!")
+                print(f"encoder: {encoder_name} Unstructured pruning:{self.unst_pruning_ratio} start!")
                 for name, module in getattr(self.model, encoder_name).named_modules():
                     if isinstance(module, torch.nn.Conv1d):
-                        prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                        prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                         
                         prune.remove(module, 'weight')
         elif apply_part == "gnn":
-            print("gnn pruning start")
             
             if self.model_name == 'sgfn' or self.model_name == 'sgpn':
                 gnn_name = 'gcn'
             else:
                 gnn_name = 'mmg'
-            print(f"gnn: {gnn_name} pruning:{self.pruning_ratio} start!")
+            print(f"gnn: {gnn_name} Unstructured pruning:{self.unst_pruning_ratio} start!")
             
             for name, module in getattr(self.model, gnn_name).named_modules():
                 if isinstance(module, torch.nn.Linear):
-                    prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')
-            print(f'masks: {self.masks}')
+                    
         elif apply_part == "classifier":
-            print(f"classifier: {apply_part} pruning:{self.pruning_ratio} start!")
             classifiers = ['obj_predictor_3d', 'rel_predictor_3d', 'obj_predictor_2d', 'rel_predictor_2d']
             for predicator in classifiers:
+                print(f"classifier: {predicator} Unstructured pruning:{self.unst_pruning_ratio} start!")
                 for name, module in getattr(self.model, predicator).named_modules():
                     if isinstance(module, torch.nn.Linear):
-                        prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                        prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                         
                         prune.remove(module, 'weight')
         elif apply_part == 'all':
-            print(f"ALL Pruning start!")
+            print(f"ALL Unstructured :{self.unst_pruning_ratio} pruning start!")
             for name, module in self.model.named_modules():
                 if isinstance(module, torch.nn.Linear):
-                    prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     
                     prune.remove(module, 'weight')
                 elif isinstance(module, torch.nn.Conv1d):
-                    prune.l1_unstructured(module, name='weight', amount=self.pruning_ratio)
+                    prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     
                     prune.remove(module, 'weight')
         else:
             print("pruning error!")
-        print(f"{apply_part} pruning success!")
+        print(f"{apply_part} Unstructured pruning success!")
 
 
     def track_pruned_weights(self):
@@ -718,15 +719,18 @@ class MMGNet():
         print(f"Model : {self.model_name}")
         print(f"Parameter reduction part: {self.config.pruning_part}", file=f_in)
         
-        print(f"Pruning ratio setting: {self.pruning_ratio}", file=f_in)
-        if self.encoder_pruned_ratio:
-            print(f"Encoder Pruning ratio: {self.encoder_pruned_ratio}", file=f_in)
-        if self.gnn_pruned_ratio:
-            print(f"GNN Pruning ratio: {self.gnn_pruned_ratio}", file=f_in)
-        if self.classifier_pruned_ratio:    
-            print(f"Classifier Pruning ratio: {self.classifier_pruned_ratio}", file=f_in)
-            
-        
+
+        if self.st_pruning_ratio:
+            print(f"Structured Pruning ratio setting: {self.st_pruning_ratio}", file=f_in)
+            if self.encoder_pruned_ratio:
+                print(f"Encoder Structured Pruning ratio: {self.encoder_pruned_ratio}", file=f_in)
+            if self.gnn_pruned_ratio:
+                print(f"GNN Structured Pruning ratio: {self.gnn_pruned_ratio}", file=f_in)
+            if self.classifier_pruned_ratio:    
+                print(f"Classifier Structured Pruning ratio: {self.classifier_pruned_ratio}", file=f_in)
+        if self.unst_pruning_ratio:            
+            print(f"Unstructured Pruning ratio setting: {self.unst_pruning_ratio}", file=f_in)
+
         print(f"Eval: 3d obj Acc@1  : {obj_acc_1}", file=f_in)   
         #print(f"Eval: 2d obj Acc@1: {obj_acc_2d_1}", file=f_in)
         print(f"Eval: 3d obj Acc@5  : {obj_acc_5}", file=f_in) 
@@ -769,6 +773,19 @@ class MMGNet():
             # calculate total parameters
             param = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
             print(f'Total Parameters: {param:,}', file=f_in)
+
+            if self.unst_pruning_ratio:
+                total_non_zero = 0
+                
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad:
+                        num_params = param.numel()
+                        if name.endswith('weight'):
+                            non_zero_params = torch.count_nonzero(param).item()
+                        else:
+                            non_zero_params = num_params
+                        total_non_zero += non_zero_params
+                print(f'Total Parameters after Unstructured pruning: {total_non_zero:,}', file=f_in)
 
             # total time
             total_time_minutes = (self.end_time - self.start_time) // 60

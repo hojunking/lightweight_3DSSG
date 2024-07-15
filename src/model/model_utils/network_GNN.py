@@ -213,8 +213,8 @@ class GraphEdgeAttenNetworkLayers(torch.nn.Module):
         if 'DROP_OUT_ATTEN' in kwargs:
             self.drop_out = torch.nn.Dropout(kwargs['DROP_OUT_ATTEN'])
         
-        # self.self_attn = nn.ModuleList(
-        #     MultiHeadAttention(d_model=dim_node, d_k=dim_node // 8, d_v=dim_node // 8, h=8) for i in range(num_layers))
+        self.self_attn = nn.ModuleList(
+            MultiHeadAttention(d_model=dim_node, d_k=dim_node // 8, d_v=dim_node // 8, h=8) for i in range(num_layers))
         
         self.self_attn_fc = nn.Sequential(  # 4 32 32 4(head)
             nn.Linear(4, 32),  # xyz, dist
@@ -267,9 +267,9 @@ class GraphEdgeAttenNetworkLayers(torch.nn.Module):
 
         for i in range(self.num_layers):
             
-            # node_feature = node_feature.unsqueeze(0)
-            # node_feature = self.self_attn[i](node_feature, node_feature, node_feature, attention_weights=distance, way=attention_matrix_way, attention_mask=mask)
-            # node_feature = node_feature.squeeze(0)
+            node_feature = node_feature.unsqueeze(0)
+            node_feature = self.self_attn[i](node_feature, node_feature, node_feature, attention_weights=distance, way=attention_matrix_way, attention_mask=mask)
+            node_feature = node_feature.squeeze(0)
             
             gconv = self.gconvs[i]
             node_feature, edge_feature, prob = gconv(node_feature, edge_feature, edges_indices)

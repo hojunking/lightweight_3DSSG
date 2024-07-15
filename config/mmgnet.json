@@ -43,7 +43,7 @@
     "multi_rel_outputs": true,
     "feature_transform": false,
     "point_feature_size": 512,
-    "edge_feature_size":256,
+    "edge_feature_size":512,
     "clip_feat_dim": 512, 
     "lambda_o": 0.1,
     "DIM_ATTEN": 256,
@@ -86,11 +86,12 @@
     "use_object_weight": false
   },
   
-  "pruning_pointnet":{
+  "pruning":{
+    "st_pruning_ratio":0.5,
+    "unst_pruning_ratio":0.5,
     "method": "group_norm",
     "max_pruning_ratio":1,
     "soft_keeping_ratio":0.2,
-    "pruning_ratio":0.5,
     "speed_up":1.1,
     "pruning_type":"l1",
     "reg":5e-4,
