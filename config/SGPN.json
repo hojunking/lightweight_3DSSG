@@ -1,7 +1,7 @@
 {
   "_NAME": ["SGFN", "Mmgnet", "SGPN"],
   "MODEL_PATH": "/home/knuvi/Desktop/song/lightweight_3DSSG/src/model/model.py",
-  "NAME": "SGFN",
+  "NAME": "SGPN",
   "PATH": "/home/knuvi/Desktop/song/lightweight_3DSSG/config",
   "multi_view_root": "/home/knuvi/Desktop/song/lightweight_3DSSG/",
   "VERBOSE": false,
@@ -24,11 +24,11 @@
   "EDGE_BUILD_TYPE": "KNN",
   "WEIGHTING": true,
   "MODEL": {
-    "N_LAYERS": 1,
-    "USE_SPATIAL": true,
+    "N_LAYERS": 5,
+    "USE_SPATIAL": false,
     "WITH_BN": false,
     "USE_GCN": true,
-    "USE_RGB": true,
+    "USE_RGB": false,
     "USE_NORMAL": false,
     "use_2d_feats": true,
     "USE_CONTEXT": true,
