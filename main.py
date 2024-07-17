@@ -97,21 +97,21 @@ def main():
             """ Unstructured + Structured pruning"""
             print("Pruning method: Unstructured + Structured pruning")
             if config.pruning_part == 'encoder':
-                model.apply_pruning("encoder")
                 model.encoder_pruning()
+                model.apply_pruning("encoder")
             elif config.pruning_part == 'gcn':
-                model.apply_pruning("gnn")
                 model.gcn_pruning()
+                model.apply_pruning("gnn")
             elif config.pruning_part == 'classifier':
-                model.apply_pruning("classifier")
                 model.classifier_pruning()
+                model.apply_pruning("classifier")
             elif config.pruning_part == 'all':
+                model.classifier_pruning()
+                model.gcn_pruning()
+                model.encoder_pruning()
                 model.apply_pruning("encoder")
                 model.apply_pruning("gnn")
                 model.apply_pruning("classifier")
-                model.encoder_pruning()
-                model.gcn_pruning()
-                model.classifier_pruning()
             else:
                 print("Error: Unknown model part specified.")
                 exit()

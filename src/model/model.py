@@ -400,7 +400,7 @@ class MMGNet():
         
         if self.model_name == 'sgfn':
             num_nodes, num_edges =130, 964
-            node_features_example = torch.randn(num_nodes, 512).to(self.config.DEVICE)
+            node_features_example = torch.randn(num_nodes, self.mconfig.point_feature_size).to(self.config.DEVICE)
             edge_features_example = torch.randn(num_edges, 256).to(self.config.DEVICE)
             edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
             
@@ -414,7 +414,7 @@ class MMGNet():
                 gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[512], ignored_layers=ignore_layers)
+                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[self.mconfig.edge_feature_size], ignored_layers=ignore_layers)
                 self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
         elif self.model_name == 'sgpn':
