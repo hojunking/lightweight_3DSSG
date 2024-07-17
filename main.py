@@ -195,15 +195,15 @@ def load_config():
             print('===   No pretrained weight start   ===')
         else:
             raise FileNotFoundError(f"The folder '{args.pretrained}' does not exist.")
-        
-    if args.st_ratio and args.unst_ratio:
+    
+    if args.st_ratio != '0' and args.unst_ratio != '0':
         config.pruning.st_pruning_ratio = float(args.st_ratio)
         config.pruning.unst_pruning_ratio = float(args.unst_ratio)
         config.pruning_method = "unst_st"
-    elif args.st_ratio:
+    elif args.st_ratio != '0':
         config.pruning.st_pruning_ratio = float(args.st_ratio)
         config.pruning_method = "st"
-    elif args.unst_ratio:
+    elif args.unst_ratio != '0':
         config.pruning.unst_pruning_ratio = float(args.unst_ratio)
         config.pruning_method = "unst"
     else:
