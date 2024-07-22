@@ -414,7 +414,7 @@ class MMGNet():
                 gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input)
                 
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
-                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[self.mconfig.edge_feature_size], ignored_layers=ignore_layers)
+                gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[self.mconfig.point_feature_size], ignored_layers=ignore_layers)
                 self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
         elif self.model_name == 'sgpn':

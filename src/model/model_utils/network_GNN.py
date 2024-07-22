@@ -213,19 +213,19 @@ class GraphEdgeAttenNetworkLayers(torch.nn.Module):
         if 'DROP_OUT_ATTEN' in kwargs:
             self.drop_out = torch.nn.Dropout(kwargs['DROP_OUT_ATTEN'])
         
-        # self.self_attn = nn.ModuleList(
-        #     MultiHeadAttention(d_model=dim_node, d_k=dim_node // 8, d_v=dim_node // 8, h=8) for i in range(num_layers))
+        self.self_attn = nn.ModuleList(
+            MultiHeadAttention(d_model=dim_node, d_k=dim_node // 8, d_v=dim_node // 8, h=8) for i in range(num_layers))
         
         # attn + SGFN
-        # self.self_attn_fc = nn.Sequential(  # 4 32 32 4(head)
-        #     nn.Linear(4, 32),  # xyz, dist
-        #     nn.ReLU(),
-        #     nn.LayerNorm(32),
-        #     nn.Linear(32, 32),
-        #     nn.ReLU(),
-        #     nn.LayerNorm(32),
-        #     nn.Linear(32, 8)
-        # )
+        self.self_attn_fc = nn.Sequential(  # 4 32 32 4(head)
+            nn.Linear(4, 32),  # xyz, dist
+            nn.ReLU(),
+            nn.LayerNorm(32),
+            nn.Linear(32, 32),
+            nn.ReLU(),
+            nn.LayerNorm(32),
+            nn.Linear(32, 8)
+        )
         
         for _ in range(self.num_layers):
             self.gconvs.append(GraphEdgeAttenNetwork(num_heads,dim_node,dim_edge,dim_atten,aggr,
@@ -234,44 +234,44 @@ class GraphEdgeAttenNetworkLayers(torch.nn.Module):
     def forward(self, node_feature, edge_feature, edges_indices, obj_center, batch_ids):
         probs = list()
 
-        # attn + SGFN
-        # if obj_center is not None:
-        #     # get attention weight
-        #     batch_size = batch_ids.max().item() + 1
-        #     N_K = node_feature.shape[0]
-        #     mask = torch.zeros(1, 1, N_K, N_K).cuda()
-        #     distance = torch.zeros(1, self.num_heads, N_K, N_K).cuda()
-        #     count = 0
+       # attn + SGFN
+        if obj_center is not None:
+            # get attention weight
+            batch_size = batch_ids.max().item() + 1
+            N_K = node_feature.shape[0]
+            mask = torch.zeros(1, 1, N_K, N_K).cuda()
+            distance = torch.zeros(1, self.num_heads, N_K, N_K).cuda()
+            count = 0
 
-        #     for i in range(batch_size):
+            for i in range(batch_size):
 
-        #         idx_i = torch.where(batch_ids == i)[0]
-        #         mask[:, :, count:count + len(idx_i), count:count + len(idx_i)] = 1
+                idx_i = torch.where(batch_ids == i)[0]
+                mask[:, :, count:count + len(idx_i), count:count + len(idx_i)] = 1
             
-        #         center_A = obj_center[None, idx_i, :].clone().detach().repeat(len(idx_i), 1, 1)
-        #         center_B = obj_center[idx_i, None, :].clone().detach().repeat(1, len(idx_i), 1)
-        #         center_dist = (center_A - center_B)
-        #         dist = center_dist.pow(2)
-        #         dist = torch.sqrt(torch.sum(dist, dim=-1))[:, :, None]
-        #         weights = torch.cat([center_dist, dist], dim=-1).unsqueeze(0)  # 1 N N 4
+                center_A = obj_center[None, idx_i, :].clone().detach().repeat(len(idx_i), 1, 1)
+                center_B = obj_center[idx_i, None, :].clone().detach().repeat(1, len(idx_i), 1)
+                center_dist = (center_A - center_B)
+                dist = center_dist.pow(2)
+                dist = torch.sqrt(torch.sum(dist, dim=-1))[:, :, None]
+                weights = torch.cat([center_dist, dist], dim=-1).unsqueeze(0)  # 1 N N 4
 
-        #         dist_weights = self.self_attn_fc(weights).permute(0,3,1,2)  # 1 num_heads N N
+                dist_weights = self.self_attn_fc(weights).permute(0,3,1,2)  # 1 num_heads N N
                 
-        #         attention_matrix_way = 'add'
-        #         distance[:, :, count:count + len(idx_i), count:count + len(idx_i)] = dist_weights
+                attention_matrix_way = 'add'
+                distance[:, :, count:count + len(idx_i), count:count + len(idx_i)] = dist_weights
 
-        #         count += len(idx_i)
-        # else:
-        #     mask = None
-        #     distance = None
-        #     attention_matrix_way = 'mul'
+                count += len(idx_i)
+        else:
+            mask = None
+            distance = None
+            attention_matrix_way = 'mul'
 
 
         for i in range(self.num_layers):
             
-            # node_feature = node_feature.unsqueeze(0)
-            # node_feature = self.self_attn[i](node_feature, node_feature, node_feature, attention_weights=distance, way=attention_matrix_way, attention_mask=mask)
-            # node_feature = node_feature.squeeze(0)
+            node_feature = node_feature.unsqueeze(0)
+            node_feature = self.self_attn[i](node_feature, node_feature, node_feature, attention_weights=distance, way=attention_matrix_way, attention_mask=mask)
+            node_feature = node_feature.squeeze(0)
             
             gconv = self.gconvs[i]
             node_feature, edge_feature, prob = gconv(node_feature, edge_feature, edges_indices)

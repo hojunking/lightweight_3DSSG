@@ -40,9 +40,10 @@ def main():
 
     # just for test
     if config.MODE == 'eval':
-        print('start validation...')
-
-        model.load(best=True)
+        print('===   Start Validation   ===')
+        #model.load(best=True)
+        model.gcn_pruning()
+        model.config.EVAL = True
         model.validation()
         exit()
     
@@ -93,9 +94,9 @@ def main():
             pruning_result = config.exp +'.txt'
             model.calculate_sparsity(pruning_result)
         
-        elif config.pruning_method == 'unst_st':
+        elif config.pruning_method == 'st_unst':
             """ Unstructured + Structured pruning"""
-            print("Pruning method: Unstructured + Structured pruning")
+            print("Pruning method: Structured + Unstructured pruning")
             if config.pruning_part == 'encoder':
                 model.encoder_pruning()
                 model.apply_pruning("encoder")
@@ -143,7 +144,7 @@ def main():
     print('start validation...')
     model.load()
     model.validation()
-    #flops = flops / 1e9
+    
 
 def count_parameters(model):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -199,7 +200,7 @@ def load_config():
     if args.st_ratio != '0' and args.unst_ratio != '0':
         config.pruning.st_pruning_ratio = float(args.st_ratio)
         config.pruning.unst_pruning_ratio = float(args.unst_ratio)
-        config.pruning_method = "unst_st"
+        config.pruning_method = "st_unst"
     elif args.st_ratio != '0':
         config.pruning.st_pruning_ratio = float(args.st_ratio)
         config.pruning_method = "st"
