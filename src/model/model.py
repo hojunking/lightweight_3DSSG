@@ -13,6 +13,7 @@ from src.dataset.dataset_builder import build_dataset
 from src.model.SGFN_MMG.model import Mmgnet
 from src.model.SGFN_MMG.baseline_sgfn import SGFN
 from src.model.SGFN_MMG.baseline_sgpn import SGPN
+from src.model.SGGpoint.baseline_SGGpoint import SGGpoint
 from src.utils import op_utils
 from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
 # pruning
@@ -90,7 +91,7 @@ class MMGNet():
             self.total = self.config.total = len(self.dataset_train) // self.config.Batch_Size
             self.max_iteration = self.config.max_iteration = int(float(self.config.MAX_EPOCHES)*len(self.dataset_train) // self.config.Batch_Size)
             self.max_iteration_scheduler = self.config.max_iteration_scheduler = int(float(100)*len(self.dataset_train) // self.config.Batch_Size)
-
+        
         ''' Build Model '''
         if self.model_name == 'Mmgnet':
             self.model = Mmgnet(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
@@ -98,6 +99,8 @@ class MMGNet():
             self.model = SGFN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         elif self.model_name == 'sgpn':
             self.model = SGPN(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
+        elif self.model_name == 'SGGpoint':
+            self.model = SGGpoint(self.config, num_obj_class, num_rel_class).to(config.DEVICE)
         else:
             print(f'Unknown model name: {self.model_name}')
             raise NotImplementedError
