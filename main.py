@@ -42,7 +42,14 @@ def main():
     if config.MODE == 'eval':
         print('===   Start Validation   ===')
         #model.load(best=True)
-        model.gcn_pruning()
+        
+        print(f'===   Pruning Method: {config.pruning_method}   ===')
+        print(f'ratio: {config.pruning.st_pruning_ratio} (Structured), {config.pruning.unst_pruning_ratio} (Unstructured)')
+        if config.pruning_method == 'st':
+            model.gcn_pruning()
+        elif config.pruning_method == 'unst':
+            model.apply_pruning("gnn")    
+
         model.config.EVAL = True
         model.validation()
         exit()
@@ -197,6 +204,7 @@ def load_config():
         else:
             raise FileNotFoundError(f"The folder '{args.pretrained}' does not exist.")
     
+    config.pruning.st_pruning_ratio, config.pruning.unst_pruning_ratio = 0, 0
     if args.st_ratio != '0' and args.unst_ratio != '0':
         config.pruning.st_pruning_ratio = float(args.st_ratio)
         config.pruning.unst_pruning_ratio = float(args.unst_ratio)
@@ -208,8 +216,7 @@ def load_config():
         config.pruning.unst_pruning_ratio = float(args.unst_ratio)
         config.pruning_method = "unst"
     else:
-        config.pruning.st_pruning_ratio, config.pruning.unst_pruning_ratio = 0, 0
-
+        config.pruning_method = 'none'
     return config
 
 if __name__ == '__main__':

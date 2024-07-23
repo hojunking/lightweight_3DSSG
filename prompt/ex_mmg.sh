@@ -1,34 +1,42 @@
 #!/bin/bash
 run_command() {
-    python -m main --mode $1 --exp $2 --part $3 --model $4 --config $5 --ratio $6 --method $7 --pretrained $8
+    python -m main --mode $1 --exp $2 --part $3 --config $4 --st_ratio $5 --unst_ratio $6 --pretrained $7
 
 }
+#run_command eval test gcn ./config/mmgnet.json 0 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
 
-# Call the function with different sets of arguments
 
-# Run 1
-#run_command prune st_enco_prune50 encoder sgfn ./config/mmgnet.json
+run_command eval eval_mmg_baseline_mmg gcn ./config/mmgnet.json 0 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+## st pruning inference 5 - 75
+run_command eval eval_mmg_st05_gcn_mmg gcn ./config/mmgnet.json 0.05 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st10_gcn_mmg gcn ./config/mmgnet.json 0.1 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st15_gcn_mmg gcn ./config/mmgnet.json 0.15 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st20_gcn_mmg gcn ./config/mmgnet.json 0.20 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st25_gcn_mmg gcn ./config/mmgnet.json 0.25 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st30_gcn_mmg gcn ./config/mmgnet.json 0.30 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st35_gcn_mmg gcn ./config/mmgnet.json 0.35 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st40_gcn_mmg gcn ./config/mmgnet.json 0.40 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st45_gcn_mmg gcn ./config/mmgnet.json 0.45 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st50_gcn_mmg gcn ./config/mmgnet.json 0.50 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st55_gcn_mmg gcn ./config/mmgnet.json 0.55 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st60_gcn_mmg gcn ./config/mmgnet.json 0.60 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st65_gcn_mmg gcn ./config/mmgnet.json 0.65 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st70_gcn_mmg gcn ./config/mmgnet.json 0.70 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_st75_gcn_mmg gcn ./config/mmgnet.json 0.75 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
 
-# Run 2
-#run_command prune st_gcn_prune50 gcn sgfn ./config/mmgnet.json
-
-# Run 3
-#run_command prune st_classif_prune50 classifier sgfn ./config/mmgnet.json
-
-# Run 4
-#run_command prune origin_t3 gcn Mmgnet ./config/mmgnet.json 0.3
-
-#run_command train test gcn Mmgnet ./config/mmgnet.json 0 unst
-#run_command prune test gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu25
-
-# run_command prune param25_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu25
-# run_command prune param25_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param25_unst75_gcn_mmg
-
-#run_command prune param50_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
-#run_command prune param50_unst75_st50_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_unst75_gcn_mmg
-
-run_command prune test gcn Mmgnet ./config/mmgnet.json 0.5 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
-
-#run_command prune param75_unst75_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.75 unst /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu75
-#run_command prune param75_unst75_st25_gcn_mmg gcn Mmgnet ./config/mmgnet.json 0.05 st /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param75_unst75_gcn_mmg
-## method : st, unst
+## unst pruning inference 5 - 75
+run_command eval eval_mmg_unst05_gcn_mmg gcn ./config/mmgnet.json 0 0.05 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst10_gcn_mmg gcn ./config/mmgnet.json 0 0.10 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst15_gcn_mmg gcn ./config/mmgnet.json 0 0.15 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst20_gcn_mmg gcn ./config/mmgnet.json 0 0.20 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst25_gcn_mmg gcn ./config/mmgnet.json 0 0.25 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst30_gcn_mmg gcn ./config/mmgnet.json 0 0.30 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst35_gcn_mmg gcn ./config/mmgnet.json 0 0.35 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst40_gcn_mmg gcn ./config/mmgnet.json 0 0.40 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst45_gcn_mmg gcn ./config/mmgnet.json 0 0.45 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst50_gcn_mmg gcn ./config/mmgnet.json 0 0.50 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst55_gcn_mmg gcn ./config/mmgnet.json 0 0.55 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst60_gcn_mmg gcn ./config/mmgnet.json 0 0.60 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst65_gcn_mmg gcn ./config/mmgnet.json 0 0.65 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst70_gcn_mmg gcn ./config/mmgnet.json 0 0.70 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+run_command eval eval_mmg_unst75_gcn_mmg gcn ./config/mmgnet.json 0 0.75 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
