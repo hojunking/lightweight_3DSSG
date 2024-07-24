@@ -2,12 +2,13 @@
     "_NAME": [
         "sgfn",
         "Mmgnet",
-        "sgpn"
+        "sgpn", 
+        "SGGpoint"
     ],
-    "MODEL_PATH": "/home/knuvi/Desktop/song/lightweight_3DSSG/src/model/model.py",
+    "MODEL_PATH": "/home/oi/Desktop/song/lightweight_3DSSG/src/model/model.py",
     "NAME": "sgfn",
-    "PATH": "/home/knuvi/Desktop/song/lightweight_3DSSG/config",
-    "multi_view_root": "/home/knuvi/Desktop/song/lightweight_3DSSG/",
+    "PATH": "/home/oi/Desktop/song/lightweight_3DSSG/config",
+    "multi_view_root": "/home/oi/Desktop/song/lightweight_3DSSG/",
     "VERBOSE": false,
     "SEED": 2020,
     "MAX_EPOCHES": 100,
@@ -33,7 +34,7 @@
     "EDGE_BUILD_TYPE": "KNN",
     "WEIGHTING": true,
     "MODEL": {
-        "N_LAYERS": 1,
+        "N_LAYERS": 2,
         "USE_SPATIAL": true,
         "WITH_BN": false,
         "USE_GCN": true,
@@ -80,13 +81,13 @@
         "NUM_HEADS": 8,
         "use_pretrain": "",
         "use_descriptor": true,
-        "obj_label_path": "/home/knuvi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/classes.txt",
-        "rel_label_path": "/home/knuvi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/relations.txt",
-        "adapter_path": "/home/knuvi/Desktop/song/lightweight_3DSSG/clip_adapter/checkpoint/origin_mean.pth"
+        "obj_label_path": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/classes.txt",
+        "rel_label_path": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/relations.txt",
+        "adapter_path": "/home/oi/Desktop/song/lightweight_3DSSG/clip_adapter/checkpoint/origin_mean.pth"
     },
     "dataset": {
-        "root": "/home/knuvi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
-        "selection": "/home/knuvi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
+        "root": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
+        "selection": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
         "use_data_augmentation": false,
         "ignore_scannet_rel": true,
         "is_v2": true,
