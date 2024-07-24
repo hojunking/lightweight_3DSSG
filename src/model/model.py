@@ -323,7 +323,13 @@ class MMGNet():
         #print(self.dataset_train[0][0].unsqueeze(0).shape)
         loader = iter(sample_loader)
         item = next(loader)
+        
         obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
+        
+        if self.model_name =='SGGpoint':
+            edge_indices = edge_indices.t()
+            print('edge_indices shape: ', edge_indices.shape)
+            
         inputs = (obj_points, obj_2d_feats, edge_indices, descriptor, batch_ids, False)
         #kwargs = {'descriptor': descriptor, 'batch_ids':batch_ids,'istrain': False}
         return FlopCountAnalysis(self.model, inputs)

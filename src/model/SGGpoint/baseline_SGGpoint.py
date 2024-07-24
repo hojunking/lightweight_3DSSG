@@ -179,6 +179,7 @@ class EdgeGCN(torch.nn.Module):
         else:
             agg_edge_indicator = 1
 
+        #print(f'node_feats: {node_feats.shape}, edge_feats: {edge_feats.shape}, edge_index: {edge_index.shape}')
         #### Node Evolution Stream (NodeGCN)
         node_feats = F.relu(self.node_GConv1(node_feats, edge_index)) * agg_edge_indicator # applying EdgeAttn on Nodes
         node_feats = F.dropout(node_feats, training=self.training)
@@ -272,13 +273,15 @@ class SGGpoint(BaseModel):
         self.mconfig = config.MODEL
         self.backbone = nn.Sequential(
             #PointNet(input_channel=9, embeddings=128),
-            DGCNN(input_channel=3, embeddings=256 - 8)
+            DGCNN(input_channel=3, embeddings=768)
         )
-        self.edge_mlp = nn.Linear(512, 512 - 11)
-        self.edge_gcn = EdgeGCN(num_node_in_embeddings=256, num_edge_in_embeddings=512, AttnNodeFlag=True, AttnEdgeFlag=True)
-        self.obj_mlp = nn.Linear(256 * 2, 256)
+        self.mlp_3d = torch.nn.Linear(512 + 256, 512 - 8)
+        self.edge_mlp = nn.Linear(512 * 2, 512 - 11)
+        self.edge_gcn = EdgeGCN(num_node_in_embeddings=512, num_edge_in_embeddings=512, AttnNodeFlag=True, AttnEdgeFlag=True)
+        self.obj_mlp = nn.Linear(512 * 2, 512)
         self.rel_mlp = nn.Linear(512 * 2, 512)
-        self.obj_classifier = NodeMLP(embeddings=256, nObjClasses=num_obj_class)
+        #self.obj_classifier = torch.nn.Linear(512, num_obj_class, bias=False)
+        self.obj_classifier = NodeMLP(embeddings=512, nObjClasses=num_obj_class)
         self.rel_classifier = EdgeMLP(embeddings=512, nRelClasses=num_rel_class)
         
         self.optimizer = optim.Adam([
@@ -298,6 +301,9 @@ class SGGpoint(BaseModel):
         # Generate node initial feature
         x = self.backbone(obj_points)
         node_feats = torch.max(x, 2)[0] # perform maxpooling
+        
+        #add
+        node_feats = self.mlp_3d(node_feats)
         # Generate edge initial feature
         if self.mconfig.USE_SPATIAL:
             tmp = descriptor[:,3:].clone()
