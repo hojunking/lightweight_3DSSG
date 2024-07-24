@@ -84,12 +84,12 @@ class Mmgnet(BaseModel):
             use_edge=self.mconfig.USE_GCN_EDGE,
             DROP_OUT_ATTEN=self.mconfig.DROP_OUT_ATTEN)
 
-        self.triplet_projector_3d = torch.nn.Sequential(
-            torch.nn.Linear(512 * 3, 512 * 2),
-            torch.nn.Dropout(0.5),
-            torch.nn.ReLU(),
-            torch.nn.Linear(512 * 2, 512)
-        )
+        # self.triplet_projector_3d = torch.nn.Sequential(
+        #     torch.nn.Linear(512 * 3, 512 * 2),
+        #     torch.nn.Dropout(0.5),
+        #     torch.nn.ReLU(),
+        #     torch.nn.Linear(512 * 2, 512)
+        # )
         
         self.triplet_projector_2d = torch.nn.Sequential(
             #redu
@@ -156,7 +156,7 @@ class Mmgnet(BaseModel):
             {'params':self.obj_predictor_3d.parameters(), 'lr':float(config.LR) / 10, 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
             {'params':self.rel_predictor_3d.parameters(), 'lr':float(config.LR), 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
             {'params':self.mlp_3d.parameters(), 'lr':float(config.LR), 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
-            {'params':self.triplet_projector_3d.parameters(), 'lr':float(config.LR), 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
+            #{'params':self.triplet_projector_3d.parameters(), 'lr':float(config.LR), 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
             {'params':self.triplet_projector_2d.parameters(), 'lr':float(config.LR), 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
             {'params':self.obj_logit_scale, 'lr':float(config.LR), 'weight_decay':self.config.W_DECAY, 'amsgrad':self.config.AMSGRAD},
         ])
@@ -165,8 +165,8 @@ class Mmgnet(BaseModel):
 
     def init_weight(self, obj_label_path, rel_label_path, adapter_path):
         torch.nn.init.xavier_uniform_(self.mlp_3d[0].weight)
-        torch.nn.init.xavier_uniform_(self.triplet_projector_3d[0].weight)
-        torch.nn.init.xavier_uniform_(self.triplet_projector_3d[-1].weight)
+        # torch.nn.init.xavier_uniform_(self.triplet_projector_3d[0].weight)
+        # torch.nn.init.xavier_uniform_(self.triplet_projector_3d[-1].weight)
         torch.nn.init.xavier_uniform_(self.triplet_projector_2d[0].weight)
         torch.nn.init.xavier_uniform_(self.triplet_projector_2d[-1].weight)
         obj_text_features, rel_text_feature = self.get_label_weight(obj_label_path, rel_label_path)
