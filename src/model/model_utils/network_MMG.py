@@ -29,12 +29,12 @@ class GraphEdgeAttenNetwork(torch.nn.Module):
             dim_node=dim_node,dim_edge=dim_edge,dim_atten=dim_atten,
             num_heads=num_heads,use_bn=use_bn,attention=attention,use_edge=use_edge, **kwargs)
         #origin
-        #self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
+        self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
         
         #redu
         #self.prop = build_mlp([dim_node+dim_atten, dim_node, dim_node],
 
-        self.prop = build_mlp([dim_node+dim_atten, dim_node],
+        #self.prop = build_mlp([dim_node+dim_atten, dim_node],
         
                             do_bn= use_bn, on_last=False)
 
