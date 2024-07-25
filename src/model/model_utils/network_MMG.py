@@ -29,12 +29,12 @@ class GraphEdgeAttenNetwork(torch.nn.Module):
             dim_node=dim_node,dim_edge=dim_edge,dim_atten=dim_atten,
             num_heads=num_heads,use_bn=use_bn,attention=attention,use_edge=use_edge, **kwargs)
         #origin
-        #self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
+        self.prop = build_mlp([dim_node+dim_atten, dim_node+dim_atten, dim_node],
         
         #redu
         #self.prop = build_mlp([dim_node+dim_atten, dim_node, dim_node],
 
-        self.prop = build_mlp([dim_node+dim_atten, dim_node],
+        #self.prop = build_mlp([dim_node+dim_atten, dim_node],
         
                             do_bn= use_bn, on_last=False)
 
@@ -65,12 +65,12 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
         self.use_edge = use_edge
         
         #origin
-        #self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
         
         # ex1 
         #self.nn_edge = build_mlp([dim_node*3+dim_edge,(dim_node+dim_edge),dim_edge],
         # layer 1 
-        self.nn_edge = build_mlp([dim_node*3,dim_edge], 
+        #self.nn_edge = build_mlp([dim_node*3,dim_edge], 
                           do_bn= use_bn, on_last=False)
         
         self.mask_obj = 0.5

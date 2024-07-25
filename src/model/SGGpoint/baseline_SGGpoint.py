@@ -272,8 +272,8 @@ class SGGpoint(BaseModel):
         self.config = config
         self.mconfig = config.MODEL
         self.backbone = nn.Sequential(
-            #PointNet(input_channel=9, embeddings=128),
-            DGCNN(input_channel=3, embeddings=768)
+            PointNet(input_channel=3, embeddings=768),
+            #DGCNN(input_channel=3, embeddings=768)
         )
         self.mlp_3d = torch.nn.Linear(512 + 256, 512 - 8)
         self.edge_mlp = nn.Linear(512 * 2, 512 - 11)
