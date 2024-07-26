@@ -65,12 +65,12 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
         self.use_edge = use_edge
         
         #origin
-        #self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
         
         # ex1 
         #self.nn_edge = build_mlp([dim_node*3+dim_edge,(dim_node+dim_edge),dim_edge],
         # layer 1 
-        self.nn_edge = build_mlp([dim_node*3,dim_edge], 
+        #self.nn_edge = build_mlp([dim_node*3,dim_edge], 
                           do_bn= use_bn, on_last=False)
         
         self.mask_obj = 0.5
