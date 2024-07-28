@@ -272,7 +272,6 @@ class MMGNet():
                     self.log(logs, iteration)
                 if self.model.iteration >= self.max_iteration:
                     break
-            
             progbar = op_utils.Progbar(self.total, width=20, stateful_metrics=['Misc/epo', 'Misc/it'])
             loader = iter(train_loader)
             self.save()
