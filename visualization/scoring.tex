@@ -1,0 +1,27 @@
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+\section*{Performance Score Calculation}
+
+\subsection*{Performance Loss Calculation}
+For each metric:
+\[
+L_{metric} = \frac{baseline_{metric} - current_{metric}}{baseline_{metric}}
+\]
+where \( metric \) is each of object accuracy (obj), relation accuracy (rel), and triplet accuracy (triplet).
+
+\subsection*{Differential Calculation}
+The differential for each metric is calculated as:
+\[
+D_{metric} = L_{metric, i+1} - L_{metric, i}
+\]
+
+\subsection*{Score Calculation Including Weights}
+The score incorporating weights for each metric is calculated by:
+\[
+S = \sum_{metric \in \{obj, rel, triplet\}} w_{metric} \cdot (|L_{metric}| - |D_{metric}|)
+\]
+where \( w_{metric} \) represents the weight for each metric.
+
+\end{document}
