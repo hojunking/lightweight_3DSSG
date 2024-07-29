@@ -65,6 +65,8 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
         self.use_edge = use_edge
         
         #origin
+        #self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
+        # edge_dim = 256
         self.nn_edge = build_mlp([dim_node*2+dim_edge,(dim_node+dim_edge),dim_edge],
         
         # ex1 
@@ -89,8 +91,9 @@ class MultiHeadedEdgeAttention(torch.nn.Module):
             else:
                 self.nn = MLP([d_n, d_n*2, d_o],do_bn=use_bn,drop_out = DROP_OUT_ATTEN)
             # redu  
-            #self.proj_edge  = build_mlp([dim_edge,dim_edge])
-            self.proj_edge  = build_mlp([dim_node,dim_edge])
+            self.proj_edge  = build_mlp([dim_edge,dim_edge])
+            #self.proj_edge  = build_mlp([dim_node,dim_edge])
+            
             self.proj_query = build_mlp([dim_node,dim_node])
             self.proj_value = build_mlp([dim_node,dim_atten])
         elif self.attention == 'distance':
