@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from src.model.model_utils.model_base import BaseModel
 from utils import op_utils
 from src.utils.eva_utils_acc import get_gt, evaluate_topk_object, evaluate_topk_predicate, evaluate_triplet_topk
-from src.model.model_utils.network_GNN import GraphEdgeAttenNetworkLayers
+from src.model.model_utils.network_GNN import GraphEdgeAttenNetworkLayers, GraphEdgeAttenNetworkLayers_attn
 from src.model.model_utils.network_PointNet import PointNetfeat, PointNetCls, PointNetRelCls, PointNetRelClsMulti
 
 class SGFN(BaseModel):
@@ -35,7 +35,7 @@ class SGFN(BaseModel):
         self.clip_feat_dim = self.config.MODEL.clip_feat_dim
         ## point feature size 512 -> 256
         #dim_point_feature = 256 # 512
-        dim_point_feature = 512 # 512
+        dim_point_feature = self.mconfig.point_feature_size # 512
         
         if self.mconfig.USE_SPATIAL:
             dim_point_feature -= dim_f_spatial-3 # ignore centroid
@@ -58,7 +58,8 @@ class SGFN(BaseModel):
             feature_transform=mconfig.feature_transform,
             out_size=mconfig.edge_feature_size)
         
-        self.gcn = GraphEdgeAttenNetworkLayers(
+        if self.mconfig.USE_SELF_ATTENTION:
+            self.gcn = GraphEdgeAttenNetworkLayers_attn(
                             self.mconfig.point_feature_size,
                             self.mconfig.edge_feature_size,
                             self.mconfig.DIM_ATTEN,
@@ -69,10 +70,20 @@ class SGFN(BaseModel):
                             attention=self.mconfig.ATTENTION,
                             use_edge=self.mconfig.USE_GCN_EDGE,
                             DROP_OUT_ATTEN=self.mconfig.DROP_OUT_ATTEN)
+        else:
+            self.gcn = GraphEdgeAttenNetworkLayers(
+                                self.mconfig.point_feature_size,
+                                self.mconfig.edge_feature_size,
+                                self.mconfig.DIM_ATTEN,
+                                self.mconfig.N_LAYERS,
+                                self.mconfig.NUM_HEADS,
+                                self.mconfig.GCN_AGGR,
+                                flow=self.flow,
+                                attention=self.mconfig.ATTENTION,
+                                use_edge=self.mconfig.USE_GCN_EDGE,
+                                DROP_OUT_ATTEN=self.mconfig.DROP_OUT_ATTEN)
 
-        ## point feature size 512 -> 256
-        #self.obj_predictor = PointNetCls(num_obj_class, in_size=256,
-        self.obj_predictor = PointNetCls(num_obj_class, in_size=512,
+        self.obj_predictor = PointNetCls(num_obj_class, in_size=self.mconfig.point_feature_size,
                                  batch_norm=with_bn, drop_out=True)
 
         if mconfig.multi_rel_outputs:
