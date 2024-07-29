@@ -410,7 +410,7 @@ class MMGNet():
         if self.model_name == 'sgfn':
             num_nodes, num_edges =130, 964
             node_features_example = torch.randn(num_nodes, self.mconfig.point_feature_size).to(self.config.DEVICE)
-            edge_features_example = torch.randn(num_edges, 256).to(self.config.DEVICE)
+            edge_features_example = torch.randn(num_edges, self.mconfig.edge_feature_size).to(self.config.DEVICE)
             edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
             
             gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)

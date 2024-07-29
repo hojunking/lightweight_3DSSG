@@ -200,7 +200,49 @@ class GraphEdgeAttenNetwork(BaseNetwork):
         names[name]['prop'] = names_nn
         return names
     
+    
 class GraphEdgeAttenNetworkLayers(torch.nn.Module):
+    """ A sequence of scene graph convolution layers  """
+    def __init__(self, dim_node, dim_edge, dim_atten, num_layers, num_heads=1, aggr= 'max', 
+                 use_bn=False,flow='target_to_source',attention = 'fat', use_edge:bool=True, **kwargs):
+        super().__init__()
+        self.num_layers = num_layers
+        self.num_heads = num_heads
+        self.gconvs = torch.nn.ModuleList()
+        
+        self.drop_out = None 
+        if 'DROP_OUT_ATTEN' in kwargs:
+            self.drop_out = torch.nn.Dropout(kwargs['DROP_OUT_ATTEN'])
+        
+        for _ in range(self.num_layers):
+            self.gconvs.append(GraphEdgeAttenNetwork(num_heads,dim_node,dim_edge,dim_atten,aggr,
+                                         use_bn=use_bn,flow=flow,attention=attention,use_edge=use_edge, **kwargs))
+
+    def forward(self, node_feature, edge_feature, edges_indices, obj_center, batch_ids):
+        probs = list()
+
+        for i in range(self.num_layers):
+            
+            
+            gconv = self.gconvs[i]
+            node_feature, edge_feature, prob = gconv(node_feature, edge_feature, edges_indices)
+            
+            if i < (self.num_layers-1) or self.num_layers==1:
+                node_feature = torch.nn.functional.relu(node_feature)
+                edge_feature = torch.nn.functional.relu(edge_feature)
+                
+                if self.drop_out:
+                    node_feature = self.drop_out(node_feature)
+                    edge_feature = self.drop_out(edge_feature)
+                
+                
+            if prob is not None:
+                probs.append(prob.cpu().detach())
+            else:
+                probs.append(None)
+        return node_feature, edge_feature, probs
+    
+class GraphEdgeAttenNetworkLayers_attn(torch.nn.Module):
     """ A sequence of scene graph convolution layers  """
     def __init__(self, dim_node, dim_edge, dim_atten, num_layers, num_heads=1, aggr= 'max', 
                  use_bn=False,flow='target_to_source',attention = 'fat', use_edge:bool=True, **kwargs):

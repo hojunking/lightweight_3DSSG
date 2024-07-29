@@ -40,6 +40,7 @@
         "USE_GCN": true,
         "USE_RGB": false,
         "USE_NORMAL": false,
+        "USE_SELF_ATTENTION": true,
         "use_2d_feats": true,
         "USE_CONTEXT": true,
         "USE_GCN_EDGE": true,
