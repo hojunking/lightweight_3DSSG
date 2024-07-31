@@ -1,9 +1,9 @@
 {
   "_NAME": ["sgfn", "Mmgnet", "sgpn"],
-  "MODEL_PATH": "/home/song/Desktop/song/VLSAT_pruning/src/model/model.py",
+  "MODEL_PATH": "/home/knuvki/Desktop/song/VLSAT_pruning/src/model/model.py",
   "NAME": "sgpn",
-  "PATH": "/home/song/Desktop/song/VLSAT_pruning/config",
-  "multi_view_root": "/home/song/Desktop/song/VLSAT_pruning/",
+  "PATH": "/home/knuvki/Desktop/song/VLSAT_pruning/config",
+  "multi_view_root": "/home/knuvki/Desktop/song/VLSAT_pruning/",
   "VERBOSE": false,
   "SEED": 2020,
   "MAX_EPOCHES": 100,
@@ -24,7 +24,7 @@
   "EDGE_BUILD_TYPE": "KNN",
   "WEIGHTING": true,
   "MODEL": {
-    "N_LAYERS": 5,
+    "N_LAYERS": 1,
     "USE_SPATIAL": false,
     "WITH_BN": false,
     "USE_GCN": true,
@@ -57,12 +57,12 @@
     "NUM_HEADS": 0,
     "use_pretrain":"",
     "use_descriptor": true,
-    "obj_label_path":"/home/song/Desktop/song/VLSAT_pruning/data/3DSSG_subset/classes.txt",
-    "rel_label_path":"/home/song/Desktop/song/VLSAT_pruning/data/3DSSG_subset/relations.txt",
-    "adapter_path":"/home/song/Desktop/song/VLSAT_pruning/clip_adapter/checkpoint/origin_mean.pth"
+    "obj_label_path":"/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset/classes.txt",
+    "rel_label_path":"/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset/relations.txt",
+    "adapter_path":"/home/knuvki/Desktop/song/VLSAT_pruning/clip_adapter/checkpoint/origin_mean.pth"
   },
   "dataset": {
-    "root": "/home/song/Desktop/song/VLSAT_pruning/data/3DSSG_subset",
+    "root": "/home/knuvki/Desktop/song/VLSAT_pruning/data/3DSSG_subset",
     "selection": "",
     "use_data_augmentation": false,
     "ignore_scannet_rel": true,
