@@ -5,10 +5,10 @@
         "sgpn", 
         "SGGpoint"
     ],
-    "MODEL_PATH": "/home/song/Desktop/song/lightweight_3DSSG/src/model/model.py",
+    "MODEL_PATH": "/home/oi/Desktop/song/lightweight_3DSSG/src/model/model.py",
     "NAME": "sgfn",
-    "PATH": "/home/song/Desktop/song/lightweight_3DSSG/config",
-    "multi_view_root": "/home/song/Desktop/song/lightweight_3DSSG/",
+    "PATH": "/home/oi/Desktop/song/lightweight_3DSSG/config",
+    "multi_view_root": "/home/oi/Desktop/song/lightweight_3DSSG/",
     "VERBOSE": false,
     "SEED": 2020,
     "MAX_EPOCHES": 100,
@@ -62,7 +62,7 @@
         "edge_feature_size": 128,
         "clip_feat_dim": 512,
         "lambda_o": 0.1,
-        "DIM_ATTEN": 256,
+        "DIM_ATTEN": 128,
         "_WEIGHT_EDGE": [
             "BG",
             "DYNAMIC",
@@ -82,13 +82,13 @@
         "NUM_HEADS": 8,
         "use_pretrain": "",
         "use_descriptor": true,
-        "obj_label_path": "/home/song/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/classes.txt",
-        "rel_label_path": "/home/song/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/relations.txt",
-        "adapter_path": "/home/song/Desktop/song/lightweight_3DSSG/clip_adapter/checkpoint/origin_mean.pth"
+        "obj_label_path": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/classes.txt",
+        "rel_label_path": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/relations.txt",
+        "adapter_path": "/home/oi/Desktop/song/lightweight_3DSSG/clip_adapter/checkpoint/origin_mean.pth"
     },
     "dataset": {
-        "root": "/home/song/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
-        "selection": "/home/song/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
+        "root": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
+        "selection": "/home/oi/Desktop/song/lightweight_3DSSG/data/3DSSG_subset",
         "use_data_augmentation": false,
         "ignore_scannet_rel": true,
         "is_v2": true,
