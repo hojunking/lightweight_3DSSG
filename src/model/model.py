@@ -13,7 +13,7 @@ from src.dataset.dataset_builder import build_dataset
 from src.model.SGFN_MMG.model import Mmgnet
 from src.model.SGFN_MMG.baseline_sgfn import SGFN
 from src.model.SGFN_MMG.baseline_sgpn import SGPN
-from src.model.SGGpoint.baseline_SGGpoint import SGGpoint
+from src.model.SGGpoint.SGGpoint_vlsat import SGGpoint
 from src.utils import op_utils
 from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
 # pruning
@@ -270,9 +270,8 @@ class MMGNet():
                             if self.config.VERBOSE else [x for x in logs if not x[0].startswith('Loss')])
                 if self.config.LOG_INTERVAL and iteration % self.config.LOG_INTERVAL == 0:
                     self.log(logs, iteration)
-                # if self.model.iteration >= self.max_iteration:
-                #     break
-
+                if self.model.iteration >= self.max_iteration:
+                    break
             progbar = op_utils.Progbar(self.total, width=20, stateful_metrics=['Misc/epo', 'Misc/it'])
             loader = iter(train_loader)
             self.save()

@@ -386,9 +386,9 @@ class SGGpoint(BaseModel):
 
         self.obj_logit_scale = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         
-        self.init_weight(obj_label_path='/data/caidaigang/project/3DSSG_Repo/data/3DSSG_subset/classes.txt', \
-                         rel_label_path='/data/caidaigang/project/3DSSG_Repo/data/3DSSG_subset/relations.txt', \
-                         adapter_path='/data/caidaigang/project/3DSSG_Repo/clip_adapter/checkpoint/origin_mean.pth')
+        self.init_weight(obj_label_path='/home/song/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/classes.txt', \
+                         rel_label_path='/home/song/Desktop/song/lightweight_3DSSG/data/3DSSG_subset/relations.txt', \
+                         adapter_path='/home/song/Desktop/song/lightweight_3DSSG/clip_adapter/checkpoint/origin_mean.pth')
 
         self.optimizer = optim.Adam([
             {'params':self.backbone.parameters(), 'lr':float(1e-4), 'weight_decay':float(1e-5), 'amsgrad':False},
