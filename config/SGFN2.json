@@ -62,7 +62,7 @@
     "edge_feature_size": 256,
     "clip_feat_dim": 512,
     "lambda_o": 0.1,
-    "DIM_ATTEN": 128,
+    "DIM_ATTEN": 256,
     "_WEIGHT_EDGE": [
       "BG",
       "DYNAMIC",
