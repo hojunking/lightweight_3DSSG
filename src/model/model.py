@@ -462,7 +462,7 @@ class MMGNet():
             edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
             gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)
 
-            ignore_layers = []
+            ignore_layers = [self.model.edge_gcn.node_attentionND, self.model.edge_gcn.edge_attentionND]
 
             gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.edge_gcn, example_inputs=gcn_example_input)
             
