@@ -360,8 +360,16 @@ class MMGNet():
                     current_speed_up = float(base_ops) / pruned_ops
                     if pruner.current_step == pruner.iterative_steps:
                         break
+            elif self.model_name == 'SGGpoint':
+                while pruned_ratio < self.st_pruning_ratio:
+                    
+                    pruner.step()
+                    pruned_ops, params_count = tp.utils.count_ops_and_params(self.model.edge_gcn, example_inputs=example_inputs)
+                    pruned_ratio = (origin_param_count - params_count) / origin_param_count
+                    current_speed_up = float(base_ops) / pruned_ops
+                    if pruner.current_step == pruner.iterative_steps:
+                        break
             else:
-                
                 while pruned_ratio < self.st_pruning_ratio:
                 
                     pruner.step()
@@ -446,6 +454,22 @@ class MMGNet():
                 gcn_3ds_pruner = self.get_pruner(self.model.gcn.gconvs[idx], example_inputs=gcn_example_input, num_classes=[1], ignored_layers=ignore_layers)
                 self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
         
+        
+        elif self.model_name == 'SGGpoint':
+            num_nodes, num_edges = 136, 1048
+            node_features_example = torch.randn(num_nodes, self.mconfig.point_feature_size).to(self.config.DEVICE)
+            edge_features_example = torch.randn(num_edges, self.mconfig.edge_feature_size).to(self.config.DEVICE)
+            edge_indices_example = torch.randint(0, num_nodes, (2, num_edges), dtype=torch.long).to(self.config.DEVICE)
+            gcn_example_input = (node_features_example, edge_features_example, edge_indices_example)
+
+            ignore_layers = []
+
+            gcn_3ds_base_ops, gcn_3ds_origin_params_count = tp.utils.count_ops_and_params(self.model.edge_gcn, example_inputs=gcn_example_input)
+            
+            print(f'gcn_3d_base_ops: {gcn_3ds_base_ops}, gcn_3d_origin_params_count: {gcn_3ds_origin_params_count}')
+            gcn_3ds_pruner = self.get_pruner(self.model.edge_gcn, example_inputs=gcn_example_input, num_classes=[512], ignored_layers=ignore_layers)
+            self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count)
+            
         ## vl-sat mmg pruning
         else:
             

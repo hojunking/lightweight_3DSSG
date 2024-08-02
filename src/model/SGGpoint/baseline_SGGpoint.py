@@ -278,12 +278,14 @@ class SGGpoint(BaseModel):
         )
         self.mlp_3d = torch.nn.Linear(512 + 256, 512 - 8)
         self.edge_mlp = nn.Linear(512 * 2, 512 - 11)
-        self.edge_gcn = EdgeGCN(num_node_in_embeddings=512, num_edge_in_embeddings=512, AttnNodeFlag=True, AttnEdgeFlag=True)
-        self.obj_mlp = nn.Linear(512 * 2, 512)
-        self.rel_mlp = nn.Linear(512 * 2, 512)
-        self.obj_classifier = torch.nn.Linear(512, num_obj_class, bias=False)
+        self.edge_gcn = EdgeGCN(num_node_in_embeddings=self.mconfig.point_feature_size,
+                                num_edge_in_embeddings=self.mconfig.edge_feature_size,
+                                AttnNodeFlag=self.mconfig.use_node_flag, AttnEdgeFlag=self.mconfig.use_edge_flag)
+        self.obj_mlp = nn.Linear(self.mconfig.point_feature_size * 2, self.mconfig.point_feature_size)
+        self.rel_mlp = nn.Linear(self.mconfig.edge_feature_size * 2, self.mconfig.edge_feature_size)
+        self.obj_classifier = torch.nn.Linear(self.mconfig.point_feature_size, num_obj_class, bias=False)
         #self.obj_classifier = NodeMLP(embeddings=512, nObjClasses=num_obj_class)
-        self.rel_classifier = EdgeMLP(embeddings=512, nRelClasses=num_rel_class)
+        self.rel_classifier = EdgeMLP(embeddings=self.mconfig.edge_feature_size, nRelClasses=num_rel_class)
         
         
         self.obj_logit_scale = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
