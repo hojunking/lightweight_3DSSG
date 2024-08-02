@@ -555,6 +555,8 @@ class MMGNet():
             
             if self.model_name == 'sgfn' or self.model_name == 'sgpn':
                 gnn_name = 'gcn'
+            elif self.model_name == 'SGGpoint':
+                gnn_name = 'edge_gcn'
             else:
                 gnn_name = 'mmg'
             print(f"gnn: {gnn_name} Unstructured pruning:{self.unst_pruning_ratio} start!")
