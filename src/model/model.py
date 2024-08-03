@@ -313,7 +313,7 @@ class MMGNet():
         sample_loader = CustomDataLoader(
             config = self.config,
             dataset=self.dataset_valid,
-            batch_size=16,
+            batch_size=1,
             num_workers=0,
             drop_last=drop_last,
             shuffle=True,
@@ -323,7 +323,7 @@ class MMGNet():
         loader = iter(sample_loader)
         item = next(loader)
         
-        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_train(item)
+        obj_points, obj_2d_feats, gt_class, gt_rel_cls, edge_indices, descriptor, batch_ids = self.data_processing_val(item)
         
         if self.model_name =='SGGpoint':
             edge_indices = edge_indices.t()
