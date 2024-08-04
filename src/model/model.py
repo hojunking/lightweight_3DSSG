@@ -16,6 +16,7 @@ from src.model.SGFN_MMG.baseline_sgpn import SGPN
 from src.model.SGGpoint.baseline_SGGpoint import SGGpoint
 from src.utils import op_utils
 from src.utils.eva_utils_acc import get_mean_recall, get_zero_shot_recall
+import torch_geometric
 # pruning
 import torch_pruning as tp
 from functools import partial
@@ -469,7 +470,7 @@ class MMGNet():
             print(f'gcn_3d_base_ops: {gcn_3ds_base_ops}, gcn_3d_origin_params_count: {gcn_3ds_origin_params_count}')
             gcn_3ds_pruner = self.get_pruner(self.model.edge_gcn, example_inputs=gcn_example_input, num_classes=[512], ignored_layers=ignore_layers)
             self.gnn_pruned_ratio = self.go_prune(prun_type, "gconvs",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count)
-            
+            self.get_submodule_parameters(self.model.edge_gcn)
         ## vl-sat mmg pruning
         else:
             
@@ -562,7 +563,8 @@ class MMGNet():
             print(f"gnn: {gnn_name} Unstructured pruning:{self.unst_pruning_ratio} start!")
             
             for name, module in getattr(self.model, gnn_name).named_modules():
-                if isinstance(module, torch.nn.Linear):
+                print(f"module: {name}, type: {type(module)}")
+                if isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')
@@ -591,7 +593,18 @@ class MMGNet():
             print("pruning error!")
         print(f"{apply_part} Unstructured pruning success!")
 
+    def count_parameters(self, model):
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+    def get_submodule_parameters(self,model):
+        submodule_params = {}
+        print (f'=== {self.model_name} Submodule Parameters ===')
+        for name, module in model.named_children():
+            submodule_params[name] = sum(p.numel() for p in module.parameters() if p.requires_grad)
+            print(f"{name}: {submodule_params[name]:,}")
+        return submodule_params
+    
+    
     def track_pruned_weights(self):
         for name, module in getattr(self.model, 'mmg').named_modules():
             if name in self.masks:
