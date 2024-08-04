@@ -3,22 +3,19 @@ run_command() {
     python -m main --mode $1 --exp $2 --part $3 --config $4 --st_ratio $5 --unst_ratio $6 --pretrained $7
 
 }
-#run_command train test gcn ./config/cfg_files/mmgnet_edge_dim256.json 0 0 x
-#run_command train redu_edge_dim256_gcn_mmg gcn ./config/mmgnet_edge_dim256.json 0 0 x
+#run_command eval test gcn ./config/mmgnet.json 0 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+#run_command train param50_real_mmg gcn ./config/mmgnet.json 0 0 x
+run_command prune param50_st35_gcn_real_mmg gcn ./config/mmgnet.json 0.35 0 /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
+run_command prune param50_st45_gcn_real_mmg gcn ./config/mmgnet.json 0.45 0 /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/p_redu50
 
-#run_command prune param65_st35_gcn_mmg gcn ./config/mmgnet_redu.json 0.35 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param75_edgedim_attndim_gcn_mmg
-#run_command train all256_gcn_mmg gcn ./config/mmgnet.json 0 0 x
-#run_command eval test gcn ./config/mmgnet.json 0.80 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
+#run_command prune param50_st25_gcn_real_mmg gcn ./config/mmgnet.json 0.25 0 /home/oi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_real_mmg
 
-# run_command train param75_edgedim_attndim_gcn_mmg gcn ./config/mmgnet_redu.json 0 0 x
-# run_command prune param75_st25_gcn_mmg gcn ./config/mmgnet_redu.json 0.25 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param75_edgedim_attndim_gcn_mmg
-# run_command prune param75_st55_gcn_mmg gcn ./config/mmgnet_redu.json 0.5 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param75_edgedim_attndim_gcn_mmg
-
-# run_command eval eval_param50_2mlp_st05_gcn_mmg gcn ./config/mmgnet.json 0.05 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_edge_mlp_reduction_gcn_mmg
-# run_command eval eval_param50_2mlp_st10_gcn_mmg gcn ./config/mmgnet.json 0.1 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_edge_mlp_reduction_gcn_mmg
-# run_command eval eval_param50_2mlp_st15_gcn_mmg gcn ./config/mmgnet.json 0.15 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_edge_mlp_reduction_gcn_mmg
-# run_command eval eval_param50_2mlp_st20_gcn_mmg gcn ./config/mmgnet.json 0.20 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_edge_mlp_reduction_gcn_mmg
-# run_command eval eval_param50_2mlp_st25_gcn_mmg gcn ./config/mmgnet.json 0.25 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_edge_mlp_reduction_gcn_mmg
+# run_command train param50_2mlp_reduction_gcn_mmg gcn ./config/mmgnet.json 0 0 x
+# run_command eval eval_param50_2mlp_st05_gcn_mmg gcn ./config/mmgnet.json 0.05 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_2mlp_reduction_gcn_mmg
+# run_command eval eval_param50_2mlp_st10_gcn_mmg gcn ./config/mmgnet.json 0.1 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_2mlp_reduction_gcn_mmg
+# run_command eval eval_param50_2mlp_st15_gcn_mmg gcn ./config/mmgnet.json 0.15 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_2mlp_reduction_gcn_mmg
+# run_command eval eval_param50_2mlp_st20_gcn_mmg gcn ./config/mmgnet.json 0.20 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_2mlp_reduction_gcn_mmg
+# run_command eval eval_param50_2mlp_st25_gcn_mmg gcn ./config/mmgnet.json 0.25 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/param50_2mlp_reduction_gcn_mmg
 
 # run_command eval eval_mmg_baseline_mmg gcn ./config/mmgnet.json 0 0 /home/knuvi/Desktop/song/lightweight_3DSSG/config/ckp/Mmgnet/vlsat_baseline
 # ## st pruning inference 5 - 95

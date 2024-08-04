@@ -24,7 +24,7 @@
   "EDGE_BUILD_TYPE": "KNN",
   "WEIGHTING": true,
   "MODEL": {
-    "N_LAYERS": 2,
+    "N_LAYERS": 1,
     "USE_SPATIAL": true,
     "WITH_BN": false,
     "USE_GCN": true,
