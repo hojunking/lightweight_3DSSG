@@ -271,8 +271,8 @@ class MMGNet():
                             if self.config.VERBOSE else [x for x in logs if not x[0].startswith('Loss')])
                 if self.config.LOG_INTERVAL and iteration % self.config.LOG_INTERVAL == 0:
                     self.log(logs, iteration)
-                if self.model.iteration >= self.max_iteration:
-                    break
+                # if self.model.iteration >= self.max_iteration:
+                #     break
             progbar = op_utils.Progbar(self.total, width=20, stateful_metrics=['Misc/epo', 'Misc/it'])
             loader = iter(train_loader)
             self.save()
@@ -285,6 +285,16 @@ class MMGNet():
             
             #self.track_pruned_weights()
             self.model.epoch += 1
+            if self.model.epoch > 100 : 
+                self.config.VALID_INTERVAL = 10 
+            # if self.update_2d:
+            #     print('load copy model from last epoch')
+            #     # copy param from previous epoch
+            #     model_pre = Mmgnet(self.config, self.num_obj_class, self.num_rel_class).to(self.config.DEVICE)
+            #     for k, p in model_pre.named_parameters():
+            #         p.data.copy_(self.model.state_dict()[k])
+            #     model_pre.model_pre = None
+            #     self.model.update_model_pre(model_pre)
             
             # if self.update_2d:
             #     print('load copy model from last epoch')
