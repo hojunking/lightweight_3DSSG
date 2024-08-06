@@ -279,8 +279,8 @@ class MMGNet():
 
             if (self.model.epoch > 20 and 'VALID_INTERVAL' in self.config and self.config.VALID_INTERVAL > 0 and self.model.epoch % self.config.VALID_INTERVAL == 0):
                 print('start validation...')
-                _, _, _, _, _, _, _, _, rel_acc_val = self.validation()
-                self.model.eva_res = rel_acc_val
+                _, _, _, _, _, _, triplet_acc_50, _, rel_acc_val = self.validation()
+                self.model.eva_res = triplet_acc_50
                 self.save()
             
             #self.track_pruned_weights()
@@ -824,9 +824,8 @@ class MMGNet():
         if self.model.config.EVAL:
             ## calculate flops
             flops = self.calc_FLOPs().total()
-            flops = flops / 1e9
-            print(f'\nTotal Flops: {flops:.4f} billion FLOPs', file=f_in)
-            
+            flops = flops / 1e6
+            print(f'\nTotal Flops: {flops:.4f} million FLOPs', file=f_in)
             # calculate total parameters
             param = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
             print(f'Total Parameters: {param:,}', file=f_in)
