@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import numpy as np
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch_geometric.nn import GCNConv
 from torch_scatter import scatter
@@ -201,7 +202,7 @@ class EdgeGCN(torch.nn.Module):
         edge_feats = F.dropout(edge_feats, training=self.training) * agg_node_indicator    # applying NodeAttn on Edges
         edge_feats = self.edge_MLP2(edge_feats).permute(0, 2, 1)  # (1, num_edges, num_embeddings)
 
-        return node_feats, edge_feats
+        return  node_feats.squeeze(0), edge_feats.squeeze(0)
 
 ###############################################
 #                                             #
@@ -272,18 +273,22 @@ class SGGpoint(BaseModel):
         self.config = config
         self.mconfig = config.MODEL
         self.backbone = nn.Sequential(
-            PointNet(input_channel=3, embeddings=768),
-            #DGCNN(input_channel=3, embeddings=768)
+            #PointNet(input_channel=3, embeddings=768),
+            DGCNN(input_channel=3, embeddings=768)
         )
         self.mlp_3d = torch.nn.Linear(512 + 256, 512 - 8)
         self.edge_mlp = nn.Linear(512 * 2, 512 - 11)
-        self.edge_gcn = EdgeGCN(num_node_in_embeddings=512, num_edge_in_embeddings=512, AttnNodeFlag=True, AttnEdgeFlag=True)
-        self.obj_mlp = nn.Linear(512 * 2, 512)
-        self.rel_mlp = nn.Linear(512 * 2, 512)
-        #self.obj_classifier = torch.nn.Linear(512, num_obj_class, bias=False)
-        self.obj_classifier = NodeMLP(embeddings=512, nObjClasses=num_obj_class)
-        self.rel_classifier = EdgeMLP(embeddings=512, nRelClasses=num_rel_class)
+        self.edge_gcn = EdgeGCN(num_node_in_embeddings=self.mconfig.point_feature_size,
+                                num_edge_in_embeddings=self.mconfig.edge_feature_size,
+                                AttnNodeFlag=self.mconfig.use_node_flag, AttnEdgeFlag=self.mconfig.use_edge_flag)
+        self.obj_mlp = nn.Linear(self.mconfig.point_feature_size * 2, self.mconfig.point_feature_size)
+        self.rel_mlp = nn.Linear(self.mconfig.edge_feature_size * 2, self.mconfig.edge_feature_size)
+        self.obj_classifier = torch.nn.Linear(self.mconfig.point_feature_size, num_obj_class, bias=False)
+        #self.obj_classifier = NodeMLP(embeddings=512, nObjClasses=num_obj_class)
+        self.rel_classifier = EdgeMLP(embeddings=self.mconfig.edge_feature_size, nRelClasses=num_rel_class)
         
+        
+        self.obj_logit_scale = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.optimizer = optim.Adam([
             {'params':self.backbone.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
             {'params':self.edge_gcn.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
@@ -292,10 +297,20 @@ class SGGpoint(BaseModel):
             {'params':self.rel_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
             {'params':self.obj_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
             {'params':self.rel_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.obj_logit_scale, 'lr':float(1e-4), 'weight_decay':False, 'amsgrad':False},
         ])
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=self.config.max_iteration, last_epoch=-1)
         self.optimizer.zero_grad()
-    
+        
+        
+    def init_weight(self, obj_label_path, rel_label_path, adapter_path):
+        torch.nn.init.xavier_uniform_(self.obj_mlp.weight)
+        torch.nn.init.xavier_uniform_(self.rel_mlp.weight)
+        torch.nn.init.xavier_uniform_(self.edge_mlp.weight)
+        
+        self.obj_logit_scale.requires_grad = True
+        
+        
     def forward(self, obj_points, obj_2d_feats, edge_indices, descriptor=None, batch_ids=None, istrain=False):
 
         # Generate node initial feature
@@ -336,15 +351,21 @@ class SGGpoint(BaseModel):
         node_feats = self.obj_mlp(torch.cat([node_feats_, node_feats_gcn.squeeze(0)], dim=-1))
         edge_feats = self.rel_mlp(torch.cat([edge_feats_, edge_feats_gcn.squeeze(0)], dim=-1))
         
-        obj_logits = self.obj_classifier(node_feats)
-        rel_logits = self.rel_classifier(edge_feats)
+        logit_scale = self.obj_logit_scale.exp()
+        obj_logits = logit_scale * self.obj_classifier(node_feats / node_feats.norm(dim=-1, keepdim=True))
         
-        return obj_logits, rel_logits
+        #obj_logits = self.obj_classifier(node_feats)
+        rel_logits = self.rel_classifier(edge_feats.squeeze(0))
+        
+        if istrain:
+            return obj_logits, rel_logits, logit_scale
+        else:
+            return obj_logits, rel_logits
     
     def process_train(self, obj_points, obj_2d_feats, gt_cls, descriptor, gt_rel_cls, edge_indices, batch_ids=None, with_log=False, ignore_none_rel=False, weights_obj=None, weights_rel=None):
         self.iteration += 1 
 
-        obj_logits_3d, rel_cls_3d = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=True)
+        obj_logits_3d, rel_cls_3d, logit_scale = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=True)
         loss_obj_3d = F.cross_entropy(obj_logits_3d, gt_cls)
         
         batch_mean = torch.sum(gt_rel_cls, dim=(0))
@@ -367,6 +388,7 @@ class SGGpoint(BaseModel):
         
         log = [("train/rel_loss", loss_rel_3d.detach().item()),
                 ("train/obj_loss", loss_obj_3d.detach().item()),
+                ("train/logit_scale", logit_scale.detach().item()),
                 ("train/loss", loss.detach().item()),
                 ("train/Obj_R1", obj_topk_list[0]),
                 ("train/Obj_R5", obj_topk_list[1]),
@@ -378,12 +400,12 @@ class SGGpoint(BaseModel):
         return log
     
     def process_val(self, obj_points, obj_2d_feats, gt_cls, descriptor, gt_rel_cls, edge_indices, batch_ids=None, with_log=False, use_triplet=False):
-        obj_logits_3d, rel_cls_3d = self(obj_points, obj_2d_feats, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=False)
+        obj_logits_3d, rel_cls_3d = self(obj_points, None, edge_indices.t().contiguous(), descriptor, batch_ids, istrain=False)
          # compute metric
         top_k_obj = evaluate_topk_object(obj_logits_3d.detach().cpu(), gt_cls, topk=11)
         gt_edges = get_gt(gt_cls, gt_rel_cls, edge_indices, self.mconfig.multi_rel_outputs)
         top_k_rel = evaluate_topk_predicate(rel_cls_3d.detach().cpu(), gt_edges, self.mconfig.multi_rel_outputs, topk=6)
-        top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores = evaluate_triplet_topk(obj_logits_3d.detach().cpu(), rel_cls_3d.detach().cpu(), gt_edges, edge_indices, self.mconfig.multi_rel_outputs, topk=101, use_clip=False, obj_topk=top_k_obj)
+        top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores = evaluate_triplet_topk(obj_logits_3d.detach().cpu(), rel_cls_3d.detach().cpu(), gt_edges, edge_indices, self.mconfig.multi_rel_outputs, topk=101, use_clip=True, obj_topk=top_k_obj)
         
         return top_k_obj, top_k_obj, top_k_rel, top_k_rel, top_k_triplet, top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores
   

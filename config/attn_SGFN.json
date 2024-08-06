@@ -11,7 +11,7 @@
     "multi_view_root": "/home/oi/Desktop/song/lightweight_3DSSG/",
     "VERBOSE": false,
     "SEED": 2020,
-    "MAX_EPOCHES": 100,
+    "MAX_EPOCHES": 120,
     "LR": 0.0001,
     "W_DECAY": false,
     "AMSGRAD": false,
@@ -62,7 +62,7 @@
         "edge_feature_size": 128,
         "clip_feat_dim": 512,
         "lambda_o": 0.1,
-        "DIM_ATTEN": 256,
+        "DIM_ATTEN": 128,
         "_WEIGHT_EDGE": [
             "BG",
             "DYNAMIC",

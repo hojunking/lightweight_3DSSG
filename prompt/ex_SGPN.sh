@@ -8,10 +8,6 @@ run_command() {
 # run_command prune param40_num_block3_25_gcn_sgpn gcn ./config/SGPN.json 0.25 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
 # run_command prune param40_num_block3_50_gcn_sgpn gcn ./config/SGPN.json 0.5 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
 # run_command prune param40_num_block3_75_gcn_sgpn gcn ./config/SGPN.json 0.75 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
-
-
-
-
 # run_command eval eval_sgpn_baseline_sgpn gcn ./config/SGPN.json 0 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/real_baseline_sgpn
 # ## st pruning inference 5 - 75
 run_command eval eval_param40_st05_gcn_sgpn gcn ./config/SGPN.json 0.05 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
@@ -29,7 +25,7 @@ run_command eval eval_param40_st60_gcn_sgpn gcn ./config/SGPN.json 0.60 0 /home/
 run_command eval eval_param40_st65_gcn_sgpn gcn ./config/SGPN.json 0.65 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
 run_command eval eval_param40_st70_gcn_sgpn gcn ./config/SGPN.json 0.70 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
 run_command eval eval_param40_st75_gcn_sgpn gcn ./config/SGPN.json 0.75 0 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/param40_num_block3_gcn_sgpn
-
+# ## st pruning inference 5 - 75
 # ## unst pruning inference 5 - 75
 # run_command eval eval_sgpn_unst05_gcn_sgpn gcn ./config/SGPN.json 0 0.05 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/real_baseline_sgpn
 # run_command eval eval_sgpn_unst10_gcn_sgpn gcn ./config/SGPN.json 0 0.10 /home/knuvki/Desktop/song/VLSAT_pruning/config/ckp/SGPN/real_baseline_sgpn

@@ -143,8 +143,8 @@ def main():
     except:
         print('unable to load previous model.')
     flops = model.calc_FLOPs().total()
-    flops = flops / 1e9
-    print(f'\nTotal Flops: {flops:.4f} billion FLOPs')
+    flops = flops / 1e6
+    print(f'\nTotal Flops: {flops:.4f} million FLOPs')
     ## WITHOUT PRUNING
     model.train()
     # we test the best model in the end
