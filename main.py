@@ -133,7 +133,7 @@ def main():
         model.train()
         
         ## After retraining, we need to validate the model
-        model.load()
+        model.load(best=True)
         model.config.EVAL = True
         model.validation()
 
@@ -150,7 +150,7 @@ def main():
     # we test the best model in the end
     model.config.EVAL = True
     print('start validation...')
-    model.load()
+    model.load(best=True)
     model.validation()
     
 
