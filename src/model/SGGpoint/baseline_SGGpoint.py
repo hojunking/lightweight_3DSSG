@@ -290,14 +290,14 @@ class SGGpoint(BaseModel):
         
         self.obj_logit_scale = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.optimizer = optim.Adam([
-            {'params':self.backbone.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.edge_gcn.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.edge_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.obj_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.rel_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.obj_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.rel_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
-            {'params':self.obj_logit_scale, 'lr':float(1e-4), 'weight_decay':False, 'amsgrad':False},
+            {'params':self.backbone.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.edge_gcn.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.edge_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.obj_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.rel_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.obj_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.rel_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
+            {'params':self.obj_logit_scale, 'lr':float(1e-4), 'weight_decay':False, 'amsgrad':self.config.AMSGRAD},
         ])
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=self.config.max_iteration, last_epoch=-1)
         self.optimizer.zero_grad()
@@ -405,7 +405,7 @@ class SGGpoint(BaseModel):
         top_k_obj = evaluate_topk_object(obj_logits_3d.detach().cpu(), gt_cls, topk=11)
         gt_edges = get_gt(gt_cls, gt_rel_cls, edge_indices, self.mconfig.multi_rel_outputs)
         top_k_rel = evaluate_topk_predicate(rel_cls_3d.detach().cpu(), gt_edges, self.mconfig.multi_rel_outputs, topk=6)
-        top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores = evaluate_triplet_topk(obj_logits_3d.detach().cpu(), rel_cls_3d.detach().cpu(), gt_edges, edge_indices, self.mconfig.multi_rel_outputs, topk=101, use_clip=True, obj_topk=top_k_obj)
+        top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores = evaluate_triplet_topk(obj_logits_3d.detach().cpu(), rel_cls_3d.detach().cpu(), gt_edges, edge_indices, self.mconfig.multi_rel_outputs, topk=101, use_clip=False, obj_topk=top_k_obj)
         
         return top_k_obj, top_k_obj, top_k_rel, top_k_rel, top_k_triplet, top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores
   

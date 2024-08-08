@@ -549,19 +549,27 @@ class MMGNet():
     
     
     def apply_pruning(self, apply_part):
+        def log_sparsity(module, name):
+            total_params = module.weight.numel()
+            non_zero_params = module.weight.nonzero().size(0)
+            sparsity = 100 * (1 - non_zero_params / total_params)
+            print(f"Sparsity of {name}: {sparsity:.2f}%")
+        
         if apply_part == "encoder":
-            if self.model_name == 'sgfn' or 'sgpn':
+            if self.model_name == 'sgfn' or self.model_name =='sgpn':
                 encoders = ['obj_encoder', 'rel_encoder']
+            elif self.model_name == 'SGGpoint':
+                encoders = ['backbone']
             # vlsat mmg
             else:
                 encoders = ['obj_encoder', 'rel_encoder_2d', 'rel_encoder_3d']
             for encoder_name in encoders:
                 print(f"encoder: {encoder_name} Unstructured pruning:{self.unst_pruning_ratio} start!")
                 for name, module in getattr(self.model, encoder_name).named_modules():
-                    if isinstance(module, torch.nn.Conv1d):
+                    if isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
                         prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
-                        
                         prune.remove(module, 'weight')
+                        log_sparsity(module, f"{encoder_name}.{name}")
         elif apply_part == "gnn":
             
             if self.model_name == 'sgfn' or self.model_name == 'sgpn':
@@ -578,6 +586,7 @@ class MMGNet():
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')
+                    log_sparsity(module, f"{gnn_name}.{name}")
 
         elif apply_part == "classifier":
             classifiers = ['obj_predictor_3d', 'rel_predictor_3d', 'obj_predictor_2d', 'rel_predictor_2d']
@@ -591,10 +600,11 @@ class MMGNet():
         elif apply_part == 'all':
             print(f"ALL Unstructured :{self.unst_pruning_ratio} pruning start!")
             for name, module in self.model.named_modules():
-                if isinstance(module, torch.nn.Linear):
+                if isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     
                     prune.remove(module, 'weight')
+                    log_sparsity(module, f"{self.model_name}.{name}")
                 elif isinstance(module, torch.nn.Conv1d):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     
