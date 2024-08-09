@@ -273,11 +273,11 @@ class SGGpoint(BaseModel):
         self.config = config
         self.mconfig = config.MODEL
         self.backbone = nn.Sequential(
-            #PointNet(input_channel=3, embeddings=768),
-            DGCNN(input_channel=3, embeddings=768)
+            PointNet(input_channel=3, embeddings=512),
+            #DGCNN(input_channel=3, embeddings=512)
         )
-        self.mlp_3d = torch.nn.Linear(512 + 256, 512 - 8)
-        self.edge_mlp = nn.Linear(512 * 2, 512 - 11)
+        self.mlp_3d = torch.nn.Linear(512, self.mconfig.point_feature_size -8)
+        self.edge_mlp = nn.Linear(self.mconfig.point_feature_size*2, self.mconfig.edge_feature_size - 11)
         self.edge_gcn = EdgeGCN(num_node_in_embeddings=self.mconfig.point_feature_size,
                                 num_edge_in_embeddings=self.mconfig.edge_feature_size,
                                 AttnNodeFlag=self.mconfig.use_node_flag, AttnEdgeFlag=self.mconfig.use_edge_flag)
@@ -290,14 +290,14 @@ class SGGpoint(BaseModel):
         
         self.obj_logit_scale = torch.nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.optimizer = optim.Adam([
-            {'params':self.backbone.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.edge_gcn.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.edge_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.obj_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.rel_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.obj_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.rel_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':self.config.AMSGRAD},
-            {'params':self.obj_logit_scale, 'lr':float(1e-4), 'weight_decay':False, 'amsgrad':self.config.AMSGRAD},
+            {'params':self.backbone.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.edge_gcn.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.edge_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.obj_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.rel_mlp.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.obj_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.rel_classifier.parameters(), 'lr':float(1e-3), 'weight_decay':float(1e-4), 'amsgrad':False},
+            {'params':self.obj_logit_scale, 'lr':float(1e-4), 'weight_decay':False, 'amsgrad':False},
         ])
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=self.config.max_iteration, last_epoch=-1)
         self.optimizer.zero_grad()
@@ -316,9 +316,10 @@ class SGGpoint(BaseModel):
         # Generate node initial feature
         x = self.backbone(obj_points)
         node_feats = torch.max(x, 2)[0] # perform maxpooling
-        
+        #print(f'node_feats: {node_feats.shape}')
         #add
         node_feats = self.mlp_3d(node_feats)
+        #print(f'node_feats: {node_feats.shape}')
         # Generate edge initial feature
         if self.mconfig.USE_SPATIAL:
             tmp = descriptor[:,3:].clone()
@@ -326,6 +327,7 @@ class SGGpoint(BaseModel):
             node_feats = torch.cat([node_feats, tmp],dim=-1)
         
         edge_feats = edge_feats_initialization(node_feats.clone(), edge_indices)
+        #print(f'node_feats: {node_feats.shape}, edge_feats: {edge_feats.shape}, edge_indices: {edge_indices.shape}')
         edge_feats = self.edge_mlp(edge_feats)
         with torch.no_grad():
             x_i = descriptor[edge_indices[0]]
@@ -405,7 +407,7 @@ class SGGpoint(BaseModel):
         top_k_obj = evaluate_topk_object(obj_logits_3d.detach().cpu(), gt_cls, topk=11)
         gt_edges = get_gt(gt_cls, gt_rel_cls, edge_indices, self.mconfig.multi_rel_outputs)
         top_k_rel = evaluate_topk_predicate(rel_cls_3d.detach().cpu(), gt_edges, self.mconfig.multi_rel_outputs, topk=6)
-        top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores = evaluate_triplet_topk(obj_logits_3d.detach().cpu(), rel_cls_3d.detach().cpu(), gt_edges, edge_indices, self.mconfig.multi_rel_outputs, topk=101, use_clip=False, obj_topk=top_k_obj)
+        top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores = evaluate_triplet_topk(obj_logits_3d.detach().cpu(), rel_cls_3d.detach().cpu(), gt_edges, edge_indices, self.mconfig.multi_rel_outputs, topk=101, use_clip=True, obj_topk=top_k_obj)
         
         return top_k_obj, top_k_obj, top_k_rel, top_k_rel, top_k_triplet, top_k_triplet, cls_matrix, sub_scores, obj_scores, rel_scores
   
@@ -415,4 +417,3 @@ class SGGpoint(BaseModel):
         self.optimizer.zero_grad()
         # update lr
         self.lr_scheduler.step()
-
