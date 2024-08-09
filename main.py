@@ -48,8 +48,10 @@ def main():
         if config.pruning_method == 'st':
             model.gcn_pruning()
         elif config.pruning_method == 'unst':
-            model.apply_pruning("gnn")    
-
+            model.apply_pruning(config.pruning_part)    
+        
+        # pruning_result = config.exp +'pruning_test.txt'
+        # model.calculate_sparsity(pruning_result)
         model.config.EVAL = True
         model.validation()
         exit()

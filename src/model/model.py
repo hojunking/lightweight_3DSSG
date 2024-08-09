@@ -7,7 +7,7 @@ import os, glob, time
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
-
+import torch.nn as nn
 from src.dataset.DataLoader import (CustomDataLoader, collate_fn_mmg)
 from src.dataset.dataset_builder import build_dataset
 from src.model.SGFN_MMG.model import Mmgnet
@@ -566,7 +566,7 @@ class MMGNet():
             for encoder_name in encoders:
                 print(f"encoder: {encoder_name} Unstructured pruning:{self.unst_pruning_ratio} start!")
                 for name, module in getattr(self.model, encoder_name).named_modules():
-                    if isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
+                    if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d, torch_geometric.nn.dense.linear.Linear)):
                         prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                         prune.remove(module, 'weight')
                         log_sparsity(module, f"{encoder_name}.{name}")
@@ -582,7 +582,7 @@ class MMGNet():
             
             for name, module in getattr(self.model, gnn_name).named_modules():
                 print(f"module: {name}, type: {type(module)}")
-                if isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
+                if isinstance(module, (nn.Linear, nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')
@@ -593,19 +593,19 @@ class MMGNet():
             for predicator in classifiers:
                 print(f"classifier: {predicator} Unstructured pruning:{self.unst_pruning_ratio} start!")
                 for name, module in getattr(self.model, predicator).named_modules():
-                    if isinstance(module, torch.nn.Linear):
+                    if isinstance(module, nn.Linear):
                         prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                         
                         prune.remove(module, 'weight')
         elif apply_part == 'all':
             print(f"ALL Unstructured :{self.unst_pruning_ratio} pruning start!")
             for name, module in self.model.named_modules():
-                if isinstance(module, (torch.nn.Linear, torch.nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
+                if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d, torch_geometric.nn.dense.linear.Linear)):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     
                     prune.remove(module, 'weight')
                     log_sparsity(module, f"{self.model_name}.{name}")
-                elif isinstance(module, torch.nn.Conv1d):
+                elif isinstance(module, nn.Conv1d):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     
                     prune.remove(module, 'weight')
