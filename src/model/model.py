@@ -108,8 +108,12 @@ class MMGNet():
         
         ## load pre-trained weights
         if self.mconfig.use_pretrain != "":
-            self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=False)
-            print(f'load pretrain model: {self.mconfig.use_pretrain}')
+            if self.config.pruning.load_pruning_model:
+                self.model = torch.load(os.path.join(self.mconfig.use_pretrain))
+            else:
+                self.model.load_pretrain_model(self.mconfig.use_pretrain, is_freeze=False)
+                print(f'load pretrain model: {self.mconfig.use_pretrain}')
+                self.config.pruning.load_pruning_model = True
 
         self.samples_path = os.path.join(config.PATH, self.model_name, self.exp,  'samples')
         self.results_path = os.path.join(config.PATH, self.model_name, self.exp, 'results')
@@ -507,7 +511,7 @@ class MMGNet():
                 print(f'gcn_3d[{idx}]_base_ops: {gcn_3ds_base_ops}, gcn_3d[{idx}]_origin_params_count: {gcn_3ds_origin_params_count}')
                 gcn_3ds_pruner = self.get_pruner(self.model.mmg.gcn_3ds[idx], example_inputs=gcn_example_input, num_classes=[self.mconfig.point_feature_size, self.mconfig.edge_feature_size], ignored_layers=ignore_layers)
                 self.gnn_pruned_ratio = self.go_prune(prun_type, "gcn_3ds",gcn_3ds_pruner, gcn_example_input, gcn_3ds_base_ops, gcn_3ds_origin_params_count, idx)
-    
+        #torch.save(self.model, os.path.join(self.config.PATH, 'ckp', "st_pruning", f'{self.exp}.pth'))
         
     def classifier_pruning(self, debug_mode = False):
         print(f'===  {self.model_name} (classifier) Structured Pruning   ===')
@@ -582,7 +586,7 @@ class MMGNet():
             
             for name, module in getattr(self.model, gnn_name).named_modules():
                 print(f"module: {name}, type: {type(module)}")
-                if isinstance(module, (nn.Linear, nn.Conv1d, torch_geometric.nn.dense.linear.Linear)):
+                if isinstance(module, (nn.Linear, nn.Conv1d, nn.Conv2d, torch_geometric.nn.dense.linear.Linear)):
                     prune.l1_unstructured(module, name='weight', amount=self.unst_pruning_ratio)
                     self.masks[name] = module.weight_mask.clone().detach()
                     prune.remove(module, 'weight')

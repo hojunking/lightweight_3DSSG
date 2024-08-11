@@ -154,6 +154,8 @@ class BaseModel(nn.Module):
             torch.save({
                 'model': model.module.state_dict()
             }, path)
+        elif self.config.pruning.load_pruning_model == True and self.config.pruning.st_pruning_ratio != 0:
+            torch.save(model, path)
         else:
             torch.save({
                 'model': model.state_dict()
@@ -175,6 +177,8 @@ class BaseModel(nn.Module):
                         name = 'module.' + k
                         new_dict [name] = v
                 model.load_state_dict(new_dict)
+            elif self.config.pruning.load_pruning_model == True and self.config.pruning.st_pruning_ratio != 0:
+                model = data
             else:
                 for k,v in data['model'].items():                    
                     if k[:6] == 'module':

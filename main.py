@@ -66,7 +66,7 @@ def main():
             if config.pruning_part == 'encoder':
                 print("Structured pruning model part: Encoder")
                 model.encoder_pruning()
-            elif config.pruning_part == 'gcn':
+            elif config.pruning_part == 'gnn':
                 print("Structured Pruning model part: GCN")
                 model.gcn_pruning()
             elif config.pruning_part == 'classifier':
@@ -86,7 +86,7 @@ def main():
             if config.pruning_part == 'encoder':
                 print("Unstructured pruning model part: Encoder")
                 model.apply_pruning("encoder")
-            elif config.pruning_part == 'gcn':
+            elif config.pruning_part == 'gnn':
                 print("Unstructured Pruning model part: GCN")
                 model.apply_pruning("gnn")
             elif config.pruning_part == 'classifier':
@@ -109,7 +109,7 @@ def main():
             if config.pruning_part == 'encoder':
                 model.encoder_pruning()
                 model.apply_pruning("encoder")
-            elif config.pruning_part == 'gcn':
+            elif config.pruning_part == 'gnn':
                 model.gcn_pruning()
                 model.apply_pruning("gnn")
             elif config.pruning_part == 'classifier':
