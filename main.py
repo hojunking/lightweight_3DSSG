@@ -132,6 +132,17 @@ def main():
             exit()
         print('\n===  Pruning Done   ===\n')
         
+        submodule_params = get_submodule_parameters(model.model)
+
+        print("각 서브모듈의 파라미터 수:")
+        for name, params in submodule_params.items():
+            print(f"{name}: {params:,}")
+        # 전체 파라미터 수 계산 및 출력
+        total_params = count_parameters(model.model)
+        print(f"총 파라미터 수: {total_params:,}")
+        flops = model.calc_FLOPs().total()
+        flops = flops / 1e6
+        print(f'\nTotal Flops: {flops:.4f} million FLOPs')
         model.train()
         
         ## After retraining, we need to validate the model
@@ -221,6 +232,10 @@ def load_config():
     else:
         config.pruning_method = 'none'
     return config
-
+def get_submodule_parameters(model):
+    submodule_params = {}
+    for name, module in model.named_children():
+        submodule_params[name] = count_parameters(module)
+    return submodule_params
 if __name__ == '__main__':
     main()

@@ -1,2 +1,2 @@
-# lightweight_3DSSG
-Lightweight 3D Semantic Scene Graph Prediction Model
+
+### Coarse-to-Fine Approach for Light 3D Scene Graph Generation
